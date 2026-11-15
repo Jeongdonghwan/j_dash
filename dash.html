@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>SEO 대시보드</title>
+<style>
+:root{--bg:#f6f7f8;--card:#fff;--ink:#16191d;--mute:#69707a;--line:#dfe3e8;--naver:#0a8f4d;--google:#2b62d9;--warn:#b4380d;--bar:#c9d2dc}
+@media(prefers-color-scheme:dark){:root{--bg:#111316;--card:#1a1d21;--ink:#e8eaed;--mute:#98a0aa;--line:#2c3138;--naver:#35c17a;--google:#7aa2f7;--warn:#f0855a;--bar:#3a424c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Pretendard,system-ui,'Malgun Gothic',sans-serif}
+.wrap{max-width:1500px;margin:0 auto;padding:24px 16px 80px}h1{font-size:20px;margin:0}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:6px}.mute{color:var(--mute)}.small{font-size:12px}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin:16px 0 20px}
+.sum div{background:var(--card);padding:12px 14px}.sum b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto;border:1px solid var(--line);background:var(--card)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:600;font-size:12px;color:var(--mute);background:var(--card);position:sticky;top:0}th:first-child,td:first-child{text-align:left}
+tr.site{cursor:pointer}tr.site:hover td{background:rgba(127,127,127,.07)}tr.pre td:first-child{color:var(--mute)}
+.n{color:var(--naver)}.g{color:var(--google)}.w{color:var(--warn)}.zero{color:var(--mute)}
+td.detail{text-align:left;padding:16px;background:var(--bg);white-space:normal}.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+.detail h3{font-size:13px;margin:0 0 6px}.detail table th,.detail table td{padding:4px 8px;font-size:12px}.detail .scroll{max-height:420px}
+svg{vertical-align:middle}a{color:inherit}
+</style></head><body><div class="wrap">
+<div class="top"><h1>SEO 대시보드</h1><span class="mute small" id="upd"></span></div>
+<p class="mute small" id="note"></p>
+<div class="sum" id="sum"></div>
+<div class="scroll"><table id="t"></table></div>
+<p class="mute small">행을 누르면 날짜별 기록·묶음별 수집률·유입 상위 페이지가 열립니다. 수집 = 검색 로봇이 페이지를 정상(200)으로 가져간 횟수. 수집률 = 로봇이 한 번이라도 가져간 페이지 ÷ 공개 페이지. 네이버 앱 유입은 경로가 안 남는 경우가 있어 실제보다 적게 잡힙니다.</p>
+</div><script>
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const f=n=>n?Number(n).toLocaleString('ko-KR'):'<span class="zero">0</span>';
+const pct=(a,b)=>b?Math.round(a/b*1000)/10+'%':'-';
+const day=(n)=>{const d=new Date(Date.now()+9*36e5-n*864e5);return d.toISOString().slice(0,10)};
+const sumk=(days,k,from)=>days.filter(x=>x.d>=from).reduce((a,x)=>a+(x[k]||0),0);
+function spark(days,k,color){const last=[];for(let i=13;i>=0;i--){const d=day(i),x=days.find(y=>y.d===d);last.push(x?x[k]||0:0)}
+  const m=Math.max(1,...last);return '<svg width="86" height="20">'+last.map((v,i)=>`<rect x="${i*6}" y="${20-Math.max(v?2:1,v/m*20)}" width="5" height="${Math.max(v?2:1,v/m*20)}" fill="${v?color:'var(--bar)'}"><title>${day(13-i)}: ${v}</title></rect>`).join('')+'</svg>'}
+function detail(s){
+  const rows=s.days.slice().reverse().slice(0,30).map(x=>`<tr><td>${x.d}</td><td>${f(x.new_pages)}</td><td>${f(x.new_posts)}</td><td class="n">${f(x.bot_naver)}</td><td class="g">${f(x.bot_google)}</td><td>${f((x.bot_bing||0)+(x.bot_daum||0))}</td><td>${f(x.bot_ai)}</td><td class="w">${f(x.rsc_naver)}</td><td class="n">${f(x.ref_naver)}</td><td>${f(x.ref_naver_etc)}</td><td class="g">${f(x.ref_google)}</td><td>${f((x.ref_daum||0)+(x.ref_bing||0))}</td><td>${f(x.views)}</td><td>${f(x['404'])}</td></tr>`).join('');
+  const parts=s.parts.map(p=>`<tr><td>${esc(p[0])}</td><td>${f(p[1])}</td><td class="n">${f(p[2])} (${pct(p[2],p[1])})</td><td class="g">${f(p[3])} (${pct(p[3],p[1])})</td></tr>`).join('');
+  const top=s.top.map(p=>`<tr><td><a href="https://${esc(s.host)}${encodeURI(p[0])}" target="_blank" rel="noopener">${esc(p[0])}</a></td><td>${f(p[1])}</td></tr>`).join('')||'<tr><td class="mute">최근 7일 검색 유입 없음</td><td></td></tr>';
+  const o=s.ops||{},inow=s.indexnow;
+  const sched=(o.schedule||[]).filter(x=>x.date>day(0)).map(x=>`${x.date} 페이지 ${x.pages||0} · 글 ${x.posts||0}`).join('<br>');
+  return `<div class="cols"><div style="grid-column:1/-1"><h3>날짜별</h3><div class="scroll"><table><tr><th>날짜</th><th>열린 페이지</th><th>발행 글</th><th>네이버 수집</th><th>구글 수집</th><th>빙·다음</th><th>AI 로봇</th><th>네이버 낭비(_rsc)</th><th>네이버 검색 유입</th><th>네이버 기타</th><th>구글 유입</th><th>다음·빙</th><th>사람 조회</th><th>404</th></tr>${rows}</table></div></div>
+  <div><h3>묶음별 수집률</h3><div class="scroll"><table><tr><th>사이트맵 묶음</th><th>주소</th><th>네이버</th><th>구글</th></tr>${parts}</table></div></div>
+  <div><h3>검색 유입 상위 (7일)</h3><div class="scroll"><table><tr><th>페이지</th><th>유입</th></tr>${top}</table></div></div>
+  <div><h3>기타</h3><p class="small">IndexNow: ${inow?`${esc(inow.date)} ${f(inow.count)}개 전송 (네이버 ${esc(inow.naver)}, 공용 ${esc(inow.indexnow)})`:'전송 기록 없음'} · 대기 ${f(s.pending)}개<br>
+  점검: ${Object.keys(s.health||{}).length?'<span class="w">'+esc(JSON.stringify(s.health))+'</span>':'이상 없음'}<br>
+  ${o.total_pages?`전체 제작 페이지 ${f(o.total_pages)} · 써 둔 글 ${f(o.total_posts)}<br>`:''}${sched?'남은 일정<br>'+sched:''}</p></div></div>`}
+fetch('data.json?'+Date.now()).then(r=>r.json()).then(d=>{
+  document.getElementById('upd').textContent='갱신 '+d.updated;
+  document.getElementById('note').textContent=d.exact_from?`${d.exact_from}부터는 사이트별로 정확히 집계합니다. 그 전 날짜는 주소로 역추적한 값이라 메인·robots 요청이 빠져 있습니다.`:'사이트별 기록이 아직 없어 주소로 역추적한 값입니다(메인·robots 요청 제외).';
+  const y=day(1),w=day(7),live=d.sites.filter(s=>!s.preview);
+  const tot=(fn)=>live.reduce((a,s)=>a+fn(s),0);
+  document.getElementById('sum').innerHTML=[['운영 사이트',live.length],['공개 페이지',tot(s=>s.pages)],['공개 글',tot(s=>s.posts)],['오늘 열린 페이지',tot(s=>sumk(s.days,'new_pages',day(0)))],['오늘 발행 글',tot(s=>sumk(s.days,'new_posts',day(0)))],['어제 네이버 수집',tot(s=>sumk(s.days.filter(x=>x.d===y),'bot_naver',y))],['어제 구글 수집',tot(s=>sumk(s.days.filter(x=>x.d===y),'bot_google',y))],['7일 검색 유입',tot(s=>sumk(s.days,'ref_naver',w)+sumk(s.days,'ref_google',w)+sumk(s.days,'ref_daum',w))]].map(([k,v])=>`<div><span class="mute small">${k}</span><b>${f(v)}</b></div>`).join('');
+  const head='<tr><th>사이트</th><th>전체 제작</th><th>공개 페이지</th><th>오늘 열림</th><th>공개 글</th><th>오늘 발행</th><th>네이버 수집 어제 / 7일</th><th>14일</th><th>구글 수집 어제 / 7일</th><th>14일</th><th>수집률 네이버</th><th>수집률 구글</th><th>검색 유입 7일 (네이버 / 구글 / 다음)</th><th>상태</th></tr>';
+  const t=document.getElementById('t');
+  t.innerHTML=head+d.sites.map((s,i)=>{const yd=s.days.find(x=>x.d===y)||{},td=s.days.find(x=>x.d===day(0))||{},bad=Object.keys(s.health||{}).length;
+    return `<tr class="site${s.preview?' pre':''}" data-i="${i}"><td>${esc(s.name)}${s.preview?' <span class="small">(미리보기)</span>':''}</td><td>${s.ops&&s.ops.total_pages?f(s.ops.total_pages):'<span class="zero">-</span>'}</td><td>${f(s.pages)}</td><td>${f(td.new_pages)}</td><td>${f(s.posts)}</td><td>${f(td.new_posts)}</td>
+    <td class="n">${f(yd.bot_naver)} / ${f(sumk(s.days,'bot_naver',w))}</td><td>${spark(s.days,'bot_naver','var(--naver)')}</td><td class="g">${f(yd.bot_google)} / ${f(sumk(s.days,'bot_google',w))}</td><td>${spark(s.days,'bot_google','var(--google)')}</td>
+    <td class="n">${pct(s.crawl.naver,s.total)}</td><td class="g">${pct(s.crawl.google,s.total)}</td><td>${f(sumk(s.days,'ref_naver',w))} / ${f(sumk(s.days,'ref_google',w))} / ${f(sumk(s.days,'ref_daum',w))}</td><td>${bad?'<span class="w">점검 '+bad+'</span>':'정상'}</td></tr>`}).join('');
+  t.addEventListener('click',e=>{const tr=e.target.closest('tr.site');if(!tr)return;const nx=tr.nextElementSibling;
+    if(nx&&nx.classList.contains('dt')){nx.remove();return}const r=document.createElement('tr');r.className='dt';r.innerHTML=`<td class="detail" colspan="14">${detail(d.sites[tr.dataset.i])}</td>`;tr.after(r)});
+}).catch(e=>{document.getElementById('note').textContent='data.json 을 읽지 못했습니다: '+e});
+</script></body></html>
