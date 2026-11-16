@@ -22,7 +22,7 @@ cat > /opt/seo-dash/dash.py <<'DASH_PY_EOF'
 
 방문 = 같은 IP·브라우저가 30분 넘게 쉬지 않고 이어 본 묶음. 전화 클릭 = 사이트의 tel: 링크를 누를 때 보내는 /_t?e=tel 요청.
 """
-import datetime as dt, glob, gzip, html, http.client, json, os, re, secrets, socket, sys, urllib.error, urllib.parse, urllib.request
+import datetime as dt, glob, gzip, html, http.client, json, os, re, secrets, socket, subprocess, sys, urllib.error, urllib.parse, urllib.request
 from collections import Counter, defaultdict
 
 for _s in (sys.stdout, sys.stderr):
@@ -188,6 +188,7 @@ def parse_logs(sites):
                         if bot: c['rsc_' + bot] += 1
                         elif human: a['real'].add(key)
                         continue
+                    if bot and status in ('200', '304') and re.search(r'/(sitemap[^/]*\.xml|rss\.xml)$', path): c['sm_' + bot] += 1   # 로봇이 사이트맵·RSS 를 읽어 간 횟수
                     if human and method == 'GET' and status in ('200', '304') and not is_page(path): a['real'].add(key)   # 그림·스크립트까지 받아 간 접속 = 실제 브라우저
                     if method != 'GET' or not is_page(path): continue
                     if status == '404':
@@ -262,6 +263,18 @@ def whois_created(host):
         return f'{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}' if m else ''
     except Exception:
         return ''
+
+
+def deployed_at(root):
+    """마지막으로 사이트 내용이 바뀐 시각(KST) — deploy 브랜치를 받는 폴더는 마지막 커밋 시각, 서버에서 빌드하는 폴더는 sitemap.xml 수정 시각."""
+    ts = None
+    if os.path.isdir(os.path.join(root, '.git')):
+        try: ts = int(subprocess.run(['git', '-C', root, 'log', '-1', '--format=%ct'], capture_output=True, text=True, timeout=20).stdout.strip())
+        except Exception: ts = None
+    if not ts:
+        try: ts = os.path.getmtime(os.path.join(root, 'sitemap.xml'))
+        except Exception: return ''
+    return dt.datetime.fromtimestamp(ts, dt.timezone(dt.timedelta(hours=9))).strftime('%Y-%m-%d %H:%M')
 
 
 def health(site, sm):
@@ -342,9 +355,19 @@ def main():
             n = max(len(st['pending']), len(st['pending_etc']))
             inow = {**(inow or {}), 'date': TODAY, 'count': n, **indexnow(s, st)}
             st['indexnow'] = inow
+            t0 = st['days'].setdefault(TODAY, {})   # 날짜별 작업 기록: 그날 보낸 주소 수(여러 번 보내면 합산)와 마지막 응답
+            t0['inow'] = t0.get('inow', 0) + n; t0['inow_naver'] = inow.get('naver', t0.get('inow_naver', '')); t0['inow_etc'] = inow.get('indexnow', t0.get('inow_etc', ''))
         ops = {}
         try: ops = json.load(open(os.path.join(s['root'], '.ops.json'), encoding='utf-8'))
         except Exception: pass
+        plan = st.setdefault('plan', {})   # 일정 파일은 '앞으로 열릴 것'만 담으므로, 본 날마다 적어 두었다가 그날 실제 열린 수와 견준다
+        for x in ops.get('schedule', []):
+            if re.fullmatch(r'\d{4}-\d\d-\d\d', str(x.get('date', ''))): plan[x['date']] = {'pages': x.get('pages', 0), 'posts': x.get('posts', 0)}
+        for k in [k for k in plan if k < (NOW.date() - dt.timedelta(days=60)).isoformat()]: del plan[k]
+        t0 = st['days'].setdefault(TODAY, {}); dep = deployed_at(s['root'])
+        t0['deployed'] = 1 if dep[:10] == TODAY else 0
+        if dep[:10] == TODAY: t0['deploy_at'] = dep[11:]
+        if TODAY in plan: t0['plan_pages'], t0['plan_posts'] = plan[TODAY]['pages'], plan[TODAY]['posts']
         sched = [x for x in ops.get('schedule', []) if x.get('date', '') > TODAY]
         left_pages, left_posts = sum(x.get('pages', 0) for x in sched), sum(x.get('posts', 0) for x in sched)
         dl = sorted(st['days'])[-45:]
@@ -352,7 +375,8 @@ def main():
         base = {'id': s['id'], 'name': s['name'], 'host': s['hosts'][0], 'preview': s['preview'], 'created': st.get('created', ''),
                 'pages': len(sm) - len(blog), 'posts': len(blog), 'total': len(sm),
                 'left_pages': left_pages, 'left_posts': left_posts,   # 전체 제작 = 공개(total) + 남은 것 — 같은 기준으로 센다
-                'crawl': {b: len(got[b]) for b in got}, 'health': health(s, sm), 'days': days}
+                'crawl': {b: len(got[b]) for b in got}, 'health': health(s, sm), 'days': days,
+                'pending': max(len(st.get('pending', [])), len(st.get('pending_etc', []))), 'last_deploy': dep}
         data['sites'].append(base)
         sess = sorted(a['sess'], key=lambda x: x['t'], reverse=True)
         detail = dict(base, updated=data['updated'], today=TODAY, exact_from=vstart, types=dict(types), schedule=sched,
@@ -436,11 +460,14 @@ else
 fi
 
 # 3) 하루 두 번 수집해서 대시보드로 올린다 (대시보드 서버가 7:30·15:30 에 합치므로 그보다 10분 먼저)
-echo '20 7,15 * * * root /usr/bin/python3 /opt/seo-dash/dash.py --push https://seo.jd8.co.kr >> /var/log/seo-dash.log 2>&1' > /etc/cron.d/seo-dash
+# DASH_ONLY="a.kr b.kr" 를 앞에 붙여 실행하면 그 호스트의 사이트만 잡는다(다시 설치할 때 안 주면 지난번 값을 그대로 쓴다)
+[ -n "${DASH_ONLY:-}" ] && printf '%s' "$DASH_ONLY" > /var/lib/seo-dash/only
+ONLY=$(cat /var/lib/seo-dash/only 2>/dev/null || true)
+echo "20 7,15 * * * root DASH_ONLY=\"$ONLY\" /usr/bin/python3 /opt/seo-dash/dash.py --push https://seo.jd8.co.kr >> /var/log/seo-dash.log 2>&1" > /etc/cron.d/seo-dash
 
 # 4) 첫 실행
-echo "== 수집 실행"
-python3 /opt/seo-dash/dash.py --push https://seo.jd8.co.kr | tee -a /var/log/seo-dash.log
+echo "== 수집 실행 (대상: ${ONLY:-파일로 내주는 사이트 전부})"
+DASH_ONLY="$ONLY" python3 /opt/seo-dash/dash.py --push https://seo.jd8.co.kr | tee -a /var/log/seo-dash.log
 echo
 echo "'대시보드로 올림' 줄에 {200: N} 이 나오면 연결된 것. 403 이면 토큰이 다름."
 echo "대시보드 서버에서 한 번 더 수집을 돌리면 바로 보인다:  python3 /opt/seo-dash/dash.py"

@@ -20,7 +20,7 @@ cat > /opt/seo-dash/dash.py <<'DASH_PY_EOF'
 
 방문 = 같은 IP·브라우저가 30분 넘게 쉬지 않고 이어 본 묶음. 전화 클릭 = 사이트의 tel: 링크를 누를 때 보내는 /_t?e=tel 요청.
 """
-import datetime as dt, glob, gzip, html, http.client, json, os, re, secrets, socket, sys, urllib.error, urllib.parse, urllib.request
+import datetime as dt, glob, gzip, html, http.client, json, os, re, secrets, socket, subprocess, sys, urllib.error, urllib.parse, urllib.request
 from collections import Counter, defaultdict
 
 for _s in (sys.stdout, sys.stderr):
@@ -186,6 +186,7 @@ def parse_logs(sites):
                         if bot: c['rsc_' + bot] += 1
                         elif human: a['real'].add(key)
                         continue
+                    if bot and status in ('200', '304') and re.search(r'/(sitemap[^/]*\.xml|rss\.xml)$', path): c['sm_' + bot] += 1   # 로봇이 사이트맵·RSS 를 읽어 간 횟수
                     if human and method == 'GET' and status in ('200', '304') and not is_page(path): a['real'].add(key)   # 그림·스크립트까지 받아 간 접속 = 실제 브라우저
                     if method != 'GET' or not is_page(path): continue
                     if status == '404':
@@ -260,6 +261,18 @@ def whois_created(host):
         return f'{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}' if m else ''
     except Exception:
         return ''
+
+
+def deployed_at(root):
+    """마지막으로 사이트 내용이 바뀐 시각(KST) — deploy 브랜치를 받는 폴더는 마지막 커밋 시각, 서버에서 빌드하는 폴더는 sitemap.xml 수정 시각."""
+    ts = None
+    if os.path.isdir(os.path.join(root, '.git')):
+        try: ts = int(subprocess.run(['git', '-C', root, 'log', '-1', '--format=%ct'], capture_output=True, text=True, timeout=20).stdout.strip())
+        except Exception: ts = None
+    if not ts:
+        try: ts = os.path.getmtime(os.path.join(root, 'sitemap.xml'))
+        except Exception: return ''
+    return dt.datetime.fromtimestamp(ts, dt.timezone(dt.timedelta(hours=9))).strftime('%Y-%m-%d %H:%M')
 
 
 def health(site, sm):
@@ -340,9 +353,19 @@ def main():
             n = max(len(st['pending']), len(st['pending_etc']))
             inow = {**(inow or {}), 'date': TODAY, 'count': n, **indexnow(s, st)}
             st['indexnow'] = inow
+            t0 = st['days'].setdefault(TODAY, {})   # 날짜별 작업 기록: 그날 보낸 주소 수(여러 번 보내면 합산)와 마지막 응답
+            t0['inow'] = t0.get('inow', 0) + n; t0['inow_naver'] = inow.get('naver', t0.get('inow_naver', '')); t0['inow_etc'] = inow.get('indexnow', t0.get('inow_etc', ''))
         ops = {}
         try: ops = json.load(open(os.path.join(s['root'], '.ops.json'), encoding='utf-8'))
         except Exception: pass
+        plan = st.setdefault('plan', {})   # 일정 파일은 '앞으로 열릴 것'만 담으므로, 본 날마다 적어 두었다가 그날 실제 열린 수와 견준다
+        for x in ops.get('schedule', []):
+            if re.fullmatch(r'\d{4}-\d\d-\d\d', str(x.get('date', ''))): plan[x['date']] = {'pages': x.get('pages', 0), 'posts': x.get('posts', 0)}
+        for k in [k for k in plan if k < (NOW.date() - dt.timedelta(days=60)).isoformat()]: del plan[k]
+        t0 = st['days'].setdefault(TODAY, {}); dep = deployed_at(s['root'])
+        t0['deployed'] = 1 if dep[:10] == TODAY else 0
+        if dep[:10] == TODAY: t0['deploy_at'] = dep[11:]
+        if TODAY in plan: t0['plan_pages'], t0['plan_posts'] = plan[TODAY]['pages'], plan[TODAY]['posts']
         sched = [x for x in ops.get('schedule', []) if x.get('date', '') > TODAY]
         left_pages, left_posts = sum(x.get('pages', 0) for x in sched), sum(x.get('posts', 0) for x in sched)
         dl = sorted(st['days'])[-45:]
@@ -350,7 +373,8 @@ def main():
         base = {'id': s['id'], 'name': s['name'], 'host': s['hosts'][0], 'preview': s['preview'], 'created': st.get('created', ''),
                 'pages': len(sm) - len(blog), 'posts': len(blog), 'total': len(sm),
                 'left_pages': left_pages, 'left_posts': left_posts,   # 전체 제작 = 공개(total) + 남은 것 — 같은 기준으로 센다
-                'crawl': {b: len(got[b]) for b in got}, 'health': health(s, sm), 'days': days}
+                'crawl': {b: len(got[b]) for b in got}, 'health': health(s, sm), 'days': days,
+                'pending': max(len(st.get('pending', [])), len(st.get('pending_etc', []))), 'last_deploy': dep}
         data['sites'].append(base)
         sess = sorted(a['sess'], key=lambda x: x['t'], reverse=True)
         detail = dict(base, updated=data['updated'], today=TODAY, exact_from=vstart, types=dict(types), schedule=sched,
@@ -630,6 +654,7 @@ tr.row{cursor:pointer}tr.row:hover td{background:#fafbfc}tr.pre td:first-child{c
 .btn{background:var(--ink);color:#fff;border:0;padding:11px 16px;cursor:pointer;font-weight:600;border-radius:10px}
 dl.gloss{margin:0;display:grid;grid-template-columns:190px 1fr}dl.gloss dt,dl.gloss dd{margin:0;padding:11px 4px;border-bottom:1px solid var(--line)}dl.gloss dt{font-weight:600}dl.gloss dd{color:#3a4350}
 details summary{cursor:pointer;color:var(--mute);font-size:12px;margin-top:12px}details .scroll{margin-top:8px;border:1px solid var(--line);border-radius:10px}
+.al{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:8px 0}.al .lv{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap;margin-top:1px}.alsite{padding:12px 0;border-top:1px solid var(--line)}.alsite:first-of-type{border-top:0;padding-top:0}.alsite>a{text-decoration:none}
 .sitehead{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin:-4px 0 16px;font-size:12px;color:var(--mute)}.sitehead a{color:var(--ink)}
 @media(max-width:900px){.shell{grid-template-columns:minmax(0,1fr)}aside{display:none}main{padding:0 14px 60px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}.donut{grid-template-columns:1fr}dl.gloss{grid-template-columns:1fr}dl.gloss dt{border-bottom:0;padding-bottom:0}
 .tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px}.tabs a{padding:7px 12px;border-radius:9px;background:var(--card);border:1px solid var(--line);text-decoration:none;white-space:nowrap;font-size:13px}.tabs a.on{background:var(--ink);color:#fff;border-color:var(--ink)}.swbtn{min-width:0;max-width:none;width:100%}.sw,.topbar .grow{flex:1 0 100%}.topbar{position:static;padding:14px 0}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:12px}.kpi b{font-size:22px}}
@@ -661,6 +686,7 @@ land:['들어온 페이지','방문이 시작된 첫 페이지입니다. 검색�
 created:['도메인 등록일','도메인을 처음 등록한 날짜입니다. 등록 정보에서 조회합니다.'],
 est:['추정 값','사이트별 기록을 남기기 전(2026-11-16 13시 이전) 날짜는 주소로 사이트를 역추적한 값입니다. 메인 페이지 요청이 빠져 있어 실제보다 적습니다.'],
 indexnow:['IndexNow','새로 열린 주소를 네이버와 빙에 바로 알리는 기능입니다. 매일 자동으로 보냅니다.'],
+smread:['사이트맵 읽어감','검색 로봇이 사이트맵(sitemap.xml)이나 RSS 를 가져간 횟수입니다. 읽어 가야 새 주소를 알게 됩니다. 사이트별 기록을 남기기 시작한 날부터 셉니다.'],
 health:['점검','표본 30쪽을 열어 파일이 있는지, 대표 주소(canonical)가 있는지, 색인 차단(noindex)이 걸려 있지 않은지 봅니다.']};
 const SRC={naver:'네이버 검색',google:'구글 검색',daum:'다음 검색',bing:'빙 검색',naver_blog:'네이버 블로그',naver_place:'네이버 플레이스·지도',naver_cafe:'네이버 카페',naver_etc:'네이버 기타',kakao:'카카오',sns:'SNS',site:'다른 사이트',direct:'직접·알 수 없음'};
 const TYPE={home:'메인',hub:'허브·서비스',kw:'지역·키워드',post:'콘텐츠(글)'};
@@ -744,9 +770,43 @@ function siteRows(){const c={y:day(1),w:day(7),t:D.today},q=query.trim().toLower
   $('#st').innerHTML=`<tr>${COLS.map((col,i)=>`<th data-sort="${i}">${i?h(col[0],col[2]):'사이트'}<span class="ar">${i===sortK?(sortDir<0?'▾':'▴'):''}</span></th>${i?'':'<th>방문자 14일</th>'}`).join('')}</tr>`+
   (rows.map(({s,v})=>`<tr class="row${s.preview?' pre':''}" data-go="#/s/${esc(s.id)}"><td>${esc(s.name)}${s.preview?'<span class="tag">미리보기</span>':''}</td><td>${spark(s.days)}</td>${v.slice(1,10).map(x=>`<td>${f(x)}</td>`).join('')}<td><span class="pb"><i style="width:${v[10]*100}%;background:var(--naver)"></i></span>${pct(s.crawl.naver,s.total)}</td><td><span class="pb"><i style="width:${v[11]*100}%;background:var(--google)"></i></span>${pct(s.crawl.google,s.total)}</td><td>${v[12]?`<span class="warn">확인 필요 ${v[12]}</span>`:'<span class="ok">정상</span>'}</td></tr>`).join('')||`<tr><td class="mute l" colspan="14">찾는 사이트가 없습니다</td></tr>`)}
 
+/* 점검이 필요한 사이트: 자료에서 규칙으로 뽑는다. [심각도, 무엇이 문제인지, 무엇을 하면 되는지] */
+function alerts(s){const a=[],d=s.days,t=D.today,y=day(1),w=day(7),T=d.find(x=>x.d===t)||{},hour=+D.updated.slice(11,13);
+  const exact=d.filter(x=>!x.est).length,ex=d.filter(x=>!x.est);
+  Object.entries(s.health||{}).forEach(([k,v])=>a.push(['bad',`점검 표본에서 "${k}" ${v}건`,k.includes('메인')?'사이트가 열리는지, 서버의 nginx 설정과 인증서를 확인합니다.':'배포가 끝까지 됐는지 확인하고, 사이트맵에 있는 주소가 실제로 열리는지 봅니다.']));
+  if(s.preview)return a;
+  if(hour>=8&&!T.deployed&&(T.plan_pages||T.plan_posts))a.push(['bad',`오늘 열릴 예정(페이지 ${T.plan_pages||0} · 글 ${T.plan_posts||0})이 있는데 배포가 안 됐습니다`,'아침 자동 배포 기록(_ops/daily.log 또는 GitHub Actions)을 확인합니다. 마지막 반영 '+(s.last_deploy||'알 수 없음')]);
+  if(T.deployed&&(T.new_pages||0)<(T.plan_pages||0))a.push(['warn',`오늘 페이지가 계획 ${T.plan_pages}개 중 ${T.new_pages||0}개만 열렸습니다`,'빌드할 때 묶음(OPEN_WAVE)이 맞게 들어갔는지 확인합니다.']);
+  if(T.deployed&&(T.new_posts||0)<(T.plan_posts||0))a.push(['warn',`오늘 글이 계획 ${T.plan_posts}편 중 ${T.new_posts||0}편만 발행됐습니다`,'글의 date 값과 빌드 시각을 확인합니다(오후 발행분은 오후 빌드 뒤에 열립니다).']);
+  const ok=c=>c===200||c===202||c===''||c==null;
+  if(T.inow&&(!ok(T.inow_naver)||!ok(T.inow_etc)))a.push(['warn',`IndexNow 전송이 거절됐습니다 (네이버 ${T.inow_naver} · 빙 쪽 ${T.inow_etc})`,'다음 수집 때 거절된 쪽만 자동으로 다시 보냅니다. 이틀 넘게 이어지면 인증 파일(사이트 주소/키.txt)이 열리는지 확인합니다.']);
+  if(s.total>=200){
+    if(sum(d,'bot_naver',w)===0)a.push(['warn','네이버 로봇이 7일 동안 안쪽 페이지를 하나도 가져가지 않았습니다','서치어드바이저에서 사이트맵과 RSS 가 제출돼 있는지 확인하고, "웹 페이지 수집"으로 허브 페이지를 요청합니다.']);
+    if(sum(d,'bot_google',w)===0)a.push(['warn','구글 로봇이 7일 동안 페이지를 하나도 가져가지 않았습니다','서치콘솔에 사이트가 등록돼 있는지, 사이트맵이 제출됐는지 확인합니다.']);
+    else if(s.crawl.google/s.total<.05&&d.length>=14)a.push(['warn',`구글 수집률이 ${pct(s.crawl.google,s.total)}로 낮습니다`,'서치콘솔 "페이지" 보고서에서 "크롤링됨 - 색인 안 됨" 비율을 봅니다. 높으면 구글이 읽은 페이지를 받아 주지 않는 것입니다.']);
+    if(exact>=3&&sum(ex,'sm_naver',w)+sum(ex,'sm_google',w)===0)a.push(['warn','검색 로봇이 사이트맵을 읽어 간 기록이 없습니다','서치어드바이저와 서치콘솔에서 사이트맵을 다시 제출합니다.']);
+    const rsc=sum(d,'rsc_naver',w),bn=sum(d,'bot_naver',w);if(rsc>=30&&rsc>bn*2)a.push(['info',`네이버 로봇이 페이지(${bn})보다 보조 파일(${rsc})을 더 많이 가져갑니다`,'하루 수집 한도가 낭비됩니다. robots.txt 에서 보조 파일(_rsc) 요청을 막는 것을 검토합니다.'])}
+  if(exact>=14){const v1=sum(d,'visitors',w,y),v0=sum(d,'visitors',day(14),day(8));if(v0>=20&&v1<v0*.5)a.push(['warn',`방문자가 지난주 ${v0}명에서 이번 주 ${v1}명으로 줄었습니다`,'매체별 추이에서 어느 매체가 줄었는지 보고, 그 매체의 색인·노출 상태를 확인합니다.']);
+    const e1=sum(d,'404',w,y),e0=sum(d,'404',day(14),day(8));if(e1>=50&&e1>e0*2)a.push(['warn',`없는 주소 요청이 ${e0}건에서 ${e1}건으로 늘었습니다`,'수집·색인 화면의 "없는 주소 요청 상위"에서 어떤 주소인지 보고, 지워진 페이지나 잘못 걸린 링크를 고칩니다.'])}
+  return a}
+const ALV={bad:['확인 필요','var(--bad)','#fdecea'],warn:['주의','#a4590a','#fdf0e3'],info:['참고','var(--mute)','#eceff3']};
+const alertList=as=>as.map(x=>`<div class="al"><span class="lv" style="color:${ALV[x[0]][1]};background:${ALV[x[0]][2]}">${ALV[x[0]][0]}</span><div><b>${esc(x[1])}</b><div class="mute small">${esc(x[2])}</div></div></div>`).join('');
+function check(){const t=D.today,y=day(1),G=(s,dd)=>s.days.find(x=>x.d===dd)||{};
+  const all=D.sites.map(s=>[s,alerts(s)]),bad=all.filter(x=>x[1].length).sort((a,b)=>(b[1].filter(x=>x[0]==='bad').length-a[1].filter(x=>x[0]==='bad').length)||b[1].length-a[1].length);
+  const two=(a,b)=>`<div>${a}</div><div class="mute small">어제 ${b}</div>`,n=v=>v?Number(v).toLocaleString('ko-KR'):'0';
+  const dep=x=>x.deployed?`<span class="ok">했음</span>${x.deploy_at?' '+esc(x.deploy_at):''}`:(x.deployed===0?'<span class="zero">안 함</span>':'<span class="zero">기록 없음</span>');
+  const open=(x,k,pk)=>`${n(x[k])}${x[pk]!=null?` <span class="${(x[k]||0)<x[pk]?'warn':'mute'} small">/ 계획 ${n(x[pk])}</span>`:''}`;
+  const okc=c=>c===200||c===202,inow=(x,s,today)=>x.inow?`${n(x.inow)}개 <span class="${okc(x.inow_naver)&&(okc(x.inow_etc)||x.inow_etc==='')?'ok':'warn'} small">네이버 ${esc(x.inow_naver)} · 빙 ${esc(x.inow_etc)}</span>`:(today&&s.pending?`<span class="warn">대기 ${n(s.pending)}</span>`:'<span class="zero">보낼 것 없음</span>');
+  const sm=x=>(x.sm_naver||x.sm_google)?`네이버 ${n(x.sm_naver)} · 구글 ${n(x.sm_google)}`:'<span class="zero">안 읽음</span>';
+  topbar('오늘 점검',`${esc(t)} 기준 · 갱신 ${esc(D.updated)} · 오늘 값은 갱신 시각까지의 기록입니다`,'');
+  main.innerHTML=`<div class="card full"><div class="chead"><h2>점검이 필요한 사이트 ${bad.length}곳</h2><span class="mute small">전체 ${D.sites.length}곳</span></div>
+  ${bad.map(([s,as])=>`<div class="alsite"><a href="#/s/${esc(s.id)}"><b>${esc(s.name)}</b></a>${alertList(as)}</div>`).join('')||'<p class="ok" style="margin:0">모든 사이트가 정상입니다.</p>'}</div>
+  <div class="card flush"><div class="chead" style="padding-bottom:14px"><div><h2>사이트별 오늘 한 일</h2><div class="mute small">칸마다 위는 오늘, 아래는 어제입니다. 줄을 누르면 그 사이트의 날짜별 작업 기록으로 갑니다. 색인 수는 서치콘솔을 연결하면 추가됩니다.</div></div></div><div class="scroll"><table>
+  <tr><th>사이트</th><th class="l">배포</th><th class="l">${h('new_pages','열린 페이지')}</th><th class="l">${h('new_posts','발행 글')}</th><th class="l">${h('indexnow')}</th><th class="l">${h('smread')}</th><th class="l">${h('bot_naver')}</th><th class="l">${h('bot_google')}</th><th>경고</th></tr>
+  ${all.map(([s,as])=>{const a=G(s,t),b=G(s,y);return `<tr class="row${s.preview?' pre':''}" data-go="#/s/${esc(s.id)}/log"><td>${esc(s.name)}${s.preview?'<span class="tag">미리보기</span>':''}</td><td class="l">${two(dep(a),dep(b))}</td><td class="l">${two(open(a,'new_pages','plan_pages'),open(b,'new_pages','plan_pages'))}</td><td class="l">${two(open(a,'new_posts','plan_posts'),open(b,'new_posts','plan_posts'))}</td><td class="l">${two(inow(a,s,1),inow(b,s,0))}</td><td class="l">${two(sm(a),sm(b))}</td><td class="l">${two(n(a.bot_naver),n(b.bot_naver))}</td><td class="l">${two(n(a.bot_google),n(b.bot_google))}</td><td>${as.length?`<span class="warn">${as.length}</span>`:'<span class="ok">없음</span>'}</td></tr>`}).join('')}</table></div></div>`}
 function overview(){
   const live=D.sites.filter(s=>!s.preview),all=merge(live),y=day(1),w=day(7),t=D.today,ds=series(all,range);
-  const tot=fn=>live.reduce((a,s)=>a+fn(s),0),dsum=(k,a,b)=>sum(all,k,a,b),bad=live.filter(s=>Object.keys(s.health||{}).length);
+  const tot=fn=>live.reduce((a,s)=>a+fn(s),0),dsum=(k,a,b)=>sum(all,k,a,b),bad=D.sites.filter(s=>alerts(s).length);
   const src={};live.forEach(s=>s.days.forEach(x=>{if(x.d>=w)for(const k in x)if(k.startsWith('src_'))src[k.slice(4)]=(src[k.slice(4)]||0)+x[k]}));
   topbar('전체 현황',`운영 사이트 ${live.length}곳${D.sites.length-live.length?` · 미리보기 ${D.sites.length-live.length}곳`:''} · 갱신 ${esc(D.updated)}`,seg('range',RNG,range));
   main.innerHTML=`${estNote(ds)}
@@ -757,7 +817,7 @@ function overview(){
   ${kpi('new_pages','plus','c-ink',f(dsum('new_pages',t,t)),`오늘 발행 글 ${dsum('new_posts',t,t).toLocaleString('ko-KR')}`)}
   ${kpi('bot_naver','bot','c-naver',f(dsum('bot_naver',y,y)),`7일 ${dsum('bot_naver',w,y).toLocaleString('ko-KR')}`,'어제 네이버 수집')}
   ${kpi('bot_google','bot','c-google',f(dsum('bot_google',y,y)),`7일 ${dsum('bot_google',w,y).toLocaleString('ko-KR')}`,'어제 구글 수집')}
-  ${kpi('health',bad.length?'alert':'eye',bad.length?'c-bad':'c-naver',bad.length?`<span class="warn">${bad.length}곳</span>`:'정상',bad.length?esc(bad.map(s=>s.name).join(', ')):'전체 이상 없음','점검')}</div>
+  ${kpi('health',bad.length?'alert':'eye',bad.length?'c-bad':'c-naver',bad.length?`<span class="warn">${bad.length}곳</span>`:'정상',bad.length?'<a href="#/check">어떤 사이트인지 보기</a>':'전체 이상 없음','점검 필요')}</div>
   <div class="grid3"><div class="card"><div class="chead"><h2>방문자와 검색 유입</h2>${legend(VS)}</div><div class="chart" id="c1"></div>${dayTable(ds,[['방문자','visitors'],['방문','visits'],['검색 유입',searchOf],['전화 클릭','tel']])}</div>
   <div class="card"><div class="chead"><h2>${h('src')} <span class="mute small">최근 7일</span></h2></div>${donut(src)}</div></div>
   <div class="card full"><div class="chead"><h2>검색 로봇 수집</h2>${legend(BS)}</div><div class="chart" id="c2"></div>${dayTable(ds,[['네이버','bot_naver'],['구글','bot_google'],['수집 낭비','rsc_naver']])}</div>
@@ -767,7 +827,7 @@ function overview(){
   $('#st').onclick=e=>{const th=e.target.closest('th[data-sort]');if(th){const i=+th.dataset.sort;if(i===sortK)sortDir=-sortDir;else{sortK=i;sortDir=i?-1:1}siteRows()}};
   charts.length=0;charts.push(()=>lineChart($('#c1'),ds,VS),()=>lineChart($('#c2'),ds,BS));draw()}
 
-const TABS=[['','개요','pulse'],['visits','방문 기록','users'],['crawl','수집·색인','bot'],['publish','공개·발행','cal']];
+const TABS=[['','개요','pulse'],['visits','방문 기록','users'],['crawl','수집·색인','bot'],['publish','공개·발행','cal'],['log','작업 기록','book']];
 async function site(id,tab){
   const s=cache[id]||(cache[id]=await api('site/'+id));if(!s)return;
   const d=s.days,y=day(1),w=day(7),t=D.today,W=win==7?s.w7:s.w14,bad=Object.entries(s.health||{}),ds=series(d,range);
@@ -811,6 +871,11 @@ async function site(id,tab){
     <div class="chead" style="margin-top:18px"><h2>${h('health')}</h2></div><p style="margin:0">${bad.length?bad.map(([k,v])=>`<span class="warn">${esc(k)} ${v}건</span>`).join(' · '):'<span class="ok">이상 없음</span>'}</p>
     <div class="chead" style="margin-top:18px"><h2>${h('e404')} 상위</h2><span class="mute small">최근 14일</span></div>${hbars(s.e404,'없는 주소 요청이 없습니다','var(--bad)')}</div></div>`;
     charts.push(()=>lineChart($('#c1'),ds,BS));
+  }else if(tab==='log'){
+    const n=v=>v?Number(v).toLocaleString('ko-KR'):'<span class="zero">0</span>',okc=c=>c===200||c===202;
+    body=`<div class="card flush"><div class="chead" style="padding-bottom:14px"><div><h2>날짜별 작업 기록</h2><div class="mute small">그날 실제로 된 일입니다. 계획은 일정 파일에 있던 수이고, 대시보드가 그 일정을 본 날부터 기록됩니다. 마지막 반영 ${esc(s.last_deploy||'알 수 없음')}</div></div></div><div class="scroll"><table>
+    <tr><th>날짜</th><th class="l">배포</th><th>열린 페이지</th><th>계획</th><th>발행 글</th><th>계획</th><th class="l">${h('indexnow')}</th><th>${h('smread','사이트맵 읽어감 네이버')}</th><th>구글</th><th>${h('bot_naver')}</th><th>${h('bot_google')}</th></tr>
+    ${ds.slice().reverse().map(x=>`<tr><td>${x.d}${x.est?'<span class="tag">추정</span>':''}</td><td class="l">${x.deployed?`<span class="ok">했음</span> ${esc(x.deploy_at||'')}`:(x.deployed===0?'<span class="zero">안 함</span>':'<span class="zero">-</span>')}</td><td>${n(x.new_pages)}</td><td>${x.plan_pages!=null?n(x.plan_pages):'<span class="zero">-</span>'}</td><td>${n(x.new_posts)}</td><td>${x.plan_posts!=null?n(x.plan_posts):'<span class="zero">-</span>'}</td><td class="l">${x.inow?`${n(x.inow)}개 <span class="${okc(x.inow_naver)?'ok':'warn'} small">네이버 ${esc(x.inow_naver)} · 빙 ${esc(x.inow_etc)}</span>`:'<span class="zero">-</span>'}</td><td>${n(x.sm_naver)}</td><td>${n(x.sm_google)}</td><td>${n(x.bot_naver)}</td><td>${n(x.bot_google)}</td></tr>`).join('')}</table></div></div>`;
   }else{
     const dd=ds.slice().reverse();
     body=`<div class="kpis">${kpi('made','file','c-ink',f(made(s)))}${kpi('total','eye','c-naver',f(s.total),`페이지 ${s.pages.toLocaleString('ko-KR')} · 글 ${s.posts.toLocaleString('ko-KR')}`)}${kpi('left','cal','c-search',f(s.left_pages+s.left_posts),`페이지 ${s.left_pages.toLocaleString('ko-KR')} · 글 ${s.left_posts.toLocaleString('ko-KR')}`)}
@@ -820,6 +885,7 @@ async function site(id,tab){
     <p class="mute small">누계는 대시보드가 이 사이트를 보기 시작한 날부터 기록됩니다.</p>`;
   }
   main.innerHTML=`<div class="sitehead"><span>${ic('globe')}</span><a href="https://${esc(s.host)}/" target="_blank" rel="noopener noreferrer">${esc(s.name)}</a><span>${h('created')} ${s.created?esc(s.created)+` · ${age.toLocaleString('ko-KR')}일째`:'확인 안 됨'}</span><span>공개 주소 ${s.total.toLocaleString('ko-KR')}</span></div>
+  ${(as=>as.length?`<div class="card full" style="border-color:#f3c9c4"><div class="chead"><h2>이 사이트에서 확인할 것 ${as.length}건</h2></div>${alertList(as)}</div>`:'')(alerts(s))}
   <nav class="tabs">${TABS.map(x=>`<a href="#/s/${esc(id)}${x[0]?'/'+x[0]:''}" class="${tab===x[0]?'on':''}">${x[1]}</a>`).join('')}</nav>${tab==='visits'?'':estNote(ds)}${body}`;
   if(tab==='visits'){const paint=()=>{const fs=$('#fsrc').value,ft=$('#ftel').value,q=$('#fq').value.trim();
       const rows=s.visits.filter(v=>(!fs||v.src===fs)&&(!ft||v.tel||v.kakao)&&(!q||(v.land+' '+v.kw+' '+v.pages.join(' ')+' '+v.ref).includes(q)));
@@ -853,12 +919,12 @@ function topbar(title,sub,right){const cur=(location.hash||'#/').slice(2).split(
   $('#pq').oninput=filt;$('#pq').onkeydown=e=>{if(e.key==='Enter'){const a=[...pop.querySelectorAll('a')].find(a=>a.style.display!=='none');if(a){location.hash=a.getAttribute('href');open(false)}}if(e.key==='Escape')open(false)}}
 function nav(){const cur=(location.hash||'#/').slice(2).split('/'),sid=cur[0]==='s'?cur[1]:'',tab=cur[2]||'';
   const a=(href,icon,label,on)=>`<a href="${href}" class="${on?'on':''}">${ic(icon)}<span>${label}</span></a>`;
-  $('#side').innerHTML=`<div class="brand"><i>${ic('pulse')}</i>운영 현황</div>${a('#/','grid','전체 현황',!cur[0])}
+  $('#side').innerHTML=`<div class="brand"><i>${ic('pulse')}</i>운영 현황</div>${a('#/','grid','전체 현황',!cur[0])}${a('#/check','alert','오늘 점검'+(n=>n?` <span class="tag" style="background:var(--bad);color:#fff">${n}</span>`:'')(D.sites.filter(s=>alerts(s).length).length),cur[0]==='check')}
   ${sid?`<div class="grp">이 사이트</div>${TABS.map(x=>a(`#/s/${esc(sid)}${x[0]?'/'+x[0]:''}`,x[2],x[1],tab===x[0])).join('')}`:`<div class="grp">사이트</div><button type="button" class="nav" id="pick">${ic('globe')}<span>사이트 고르기</span></button>`}
   <div class="sp"></div>${a('#/help','book','용어 설명',cur[0]==='help')}${a('#/account','key','비밀번호 변경',cur[0]==='account')}<form method="post" action="/logout"><button class="nav">${ic('out')}<span>로그아웃</span></button></form>`;
   const p=$('#pick');if(p)p.onclick=e=>{e.stopPropagation();$('#swb').click()}}
 async function route(){if(!D){D=await api('data');if(!D)return}const p=(location.hash||'#/').slice(2).split('/');tip.style.display='none';
-  if(p[0]==='s'&&D.sites.some(s=>s.id===p[1]))await site(p[1],TABS.some(x=>x[0]===p[2])?p[2]:'');else if(p[0]==='help')help();else if(p[0]==='account')account();else overview();nav()}
+  if(p[0]==='s'&&D.sites.some(s=>s.id===p[1]))await site(p[1],TABS.some(x=>x[0]===p[2])?p[2]:'');else if(p[0]==='check')check();else if(p[0]==='help')help();else if(p[0]==='account')account();else overview();nav()}
 addEventListener('hashchange',()=>route().then(()=>scrollTo(0,0)));
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(draw,150)});
 document.addEventListener('click',e=>{const pop=$('#pop');if(pop&&pop.classList.contains('open'))pop.classList.remove('open');
