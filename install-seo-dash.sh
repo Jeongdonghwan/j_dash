@@ -139,8 +139,9 @@ def parse_logs(sites):
 def health(site, sm):
     bad, paths = Counter(), list(sm)[:: max(1, len(sm) // 30)][:30]
     for p in paths:
-        f = os.path.join(site['root'], p.strip('/'), 'index.html')
-        if not os.path.isfile(f): bad['파일 없음'] += 1; continue
+        q = os.path.join(site['root'], p.strip('/'))
+        f = next((x for x in (os.path.join(q, 'index.html'), q + '.html', q) if os.path.isfile(x)), None)
+        if not f: bad['파일 없음'] += 1; continue
         t = open(f, encoding='utf-8', errors='ignore').read(20000)
         if 'rel="canonical"' not in t: bad['canonical 없음'] += 1
         if re.search(r'<meta name="robots" content="[^"]*noindex', t): bad['noindex'] += 1
