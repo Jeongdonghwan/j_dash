@@ -154,19 +154,24 @@ def health(site, sm):
     return dict(bad)
 
 
-def indexnow(site, st, urls):
+def indexnow(site, st):
+    """창구마다 대기 목록을 따로 둔다 — 한쪽이 거절해도 다른 쪽에 같은 주소를 또 보내지 않는다."""
     key = st.setdefault('key', secrets.token_hex(16))
     kf = os.path.join(site['root'], key + '.txt')
     if not os.path.exists(kf): open(kf, 'w').write(key)
-    u0 = urllib.parse.urlparse(urls[0]); res = {}
-    for name, ep in (('naver', 'https://searchadvisor.naver.com/indexnow'), ('indexnow', 'https://api.indexnow.org/indexnow')):
+    res = {}
+    for name, ep, q in (('naver', 'https://searchadvisor.naver.com/indexnow', 'pending'), ('indexnow', 'https://api.indexnow.org/indexnow', 'pending_etc')):
+        urls = st.get(q) or []
+        if not urls: continue
+        u0 = urllib.parse.urlparse(urls[0])
         for i in range(0, len(urls), 10000):
             body = json.dumps({'host': u0.netloc, 'key': key, 'keyLocation': f'{u0.scheme}://{u0.netloc}/{key}.txt', 'urlList': urls[i:i + 10000]}).encode()
             try: code = urllib.request.urlopen(urllib.request.Request(ep, body, {'Content-Type': 'application/json; charset=utf-8'}), timeout=60).status
             except urllib.error.HTTPError as e: code = e.code
             except Exception as e: code = str(e)[:60]
             res[name] = code
-            if code == 429: break
+            if code not in (200, 202): break
+        else: st[q] = []
     return res
 
 
@@ -195,12 +200,15 @@ def main():
         parts = defaultdict(lambda: [0, 0, 0])
         for p, (_, _, name) in sm.items():
             parts[name][0] += 1; parts[name][1] += p in got['naver']; parts[name][2] += p in got['google']
-        if not s['preview']:
-            st['pending'] = list(dict.fromkeys(st.get('pending', []) + [sm[p][1] for p in new]))
         inow = st.get('indexnow')
-        if '--indexnow' in sys.argv and st['pending'] and not s['preview']:
-            inow = {'date': TODAY, 'count': len(st['pending']), **indexnow(s, st, st['pending'])}
-            if any(v in (200, 202) for k, v in inow.items() if k in ('naver', 'indexnow')): st['pending'] = []
+        if not s['preview']:
+            if 'pending_etc' not in st:  # 옛 상태: 공용 창구가 거절했으면 전체를 다시 보낸다
+                st['pending_etc'] = [] if (inow or {}).get('indexnow') in (200, 202) else [v[1] for v in sm.values()]
+            for q in ('pending', 'pending_etc'):
+                st[q] = list(dict.fromkeys(st.get(q, []) + [sm[p][1] for p in new]))
+        if '--indexnow' in sys.argv and not s['preview'] and (st['pending'] or st['pending_etc']):
+            n = max(len(st['pending']), len(st['pending_etc']))
+            inow = {**(inow or {}), 'date': TODAY, 'count': n, **indexnow(s, st)}
             st['indexnow'] = inow
         ops = {}
         try: ops = json.load(open(os.path.join(s['root'], '.ops.json'), encoding='utf-8'))
