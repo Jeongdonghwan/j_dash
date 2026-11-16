@@ -216,21 +216,28 @@ def parse_logs(sites):
     return A, min(vdates) if vdates else None
 
 
+MEDIA = {'naver': 'naver', 'google': 'google', 'daum': 'search_etc', 'bing': 'search_etc', 'naver_blog': 'naver_etc', 'naver_place': 'naver_etc',
+         'naver_cafe': 'naver_etc', 'naver_etc': 'naver_etc', 'direct': 'direct'}   # 그 밖(다른 사이트·SNS·카카오) = other
+
+
 def window(sess, sm, days):
-    """최근 N일 방문 묶음 요약 — 어디서, 어떤 페이지로, 어떤 검색어로."""
+    """최근 N일 방문 묶음 요약 — 어느 매체에서, 어떤 페이지로 들어왔는지. 페이지·유형마다 매체별 방문 수를 함께 낸다."""
     since = (NOW.date() - dt.timedelta(days=days - 1)).isoformat()
-    src, land, kw, ref, dev, typ = Counter(), defaultdict(lambda: [0, 0]), Counter(), Counter(), Counter(), defaultdict(lambda: [0, 0])
+    src, land, kw, ref, dev, typ = Counter(), defaultdict(Counter), Counter(), Counter(), Counter(), defaultdict(Counter)
+    pt = lambda p: ptype(p, sm.get(p, ('', '', ''))[2])
     for s in sess:
         if s['d'] < since: continue
-        is_search = s['src'] in SEARCH
+        m = MEDIA.get(s['src'], 'other')
         src[s['src']] += 1; dev[s['dev']] += 1
-        land[s['land']][0] += 1; land[s['land']][1] += is_search
-        t = ptype(s['land'], sm.get(s['land'], ('', '', ''))[2])
-        typ[t][0] += 1; typ[t][1] += is_search
-        if s['kw']: kw[(s['src'], s['kw'])] += 1
-        if s['src'] in ('site', 'sns', 'kakao', 'naver_blog', 'naver_cafe', 'naver_place', 'naver_etc'): ref[s['ref']] += 1
-    return {'src': dict(src), 'dev': dict(dev), 'type': typ,
-            'land': [[p, v[0], v[1], ptype(p, sm.get(p, ('', '', ''))[2])] for p, v in sorted(land.items(), key=lambda x: -x[1][0])[:25]],
+        land[s['land']][m] += 1; typ[pt(s['land'])][m] += 1
+        if s['kw'] and not s['kw'].startswith('http'): kw[(s['src'], s['kw'])] += 1   # 구글 링크 넘김(q=주소)은 검색어가 아니다
+        if m in ('other', 'naver_etc'): ref[s['ref']] += 1
+    tot = lambda c: sum(c.values())
+    pick = {p for p, _ in sorted(land.items(), key=lambda x: -tot(x[1]))[:30]}
+    for m in ('naver', 'google', 'search_etc', 'naver_etc', 'direct', 'other'):   # 매체별 상위도 빠지지 않게
+        pick |= {p for p, c in sorted(land.items(), key=lambda x: -x[1][m])[:12] if c[m]}
+    return {'src': dict(src), 'dev': dict(dev), 'type': {k: dict(v) for k, v in typ.items()},
+            'land': [[p, pt(p), dict(land[p])] for p in sorted(pick, key=lambda p: -tot(land[p]))],
             'kw': [[k[1], k[0], n] for k, n in kw.most_common(25)], 'ref': ref.most_common(15)}
 
 
@@ -569,6 +576,7 @@ h1{font-size:22px;margin:0;letter-spacing:-.02em;line-height:1.3}h2{font-size:15
 .scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 th,td{padding:10px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th{font-size:12px;font-weight:600;color:var(--mute);background:var(--soft)}
 tr:last-child td{border-bottom:0}th:first-child,td:first-child,th.l,td.l{text-align:left}td.wrap{white-space:normal;word-break:break-all;max-width:420px}
+th[data-ls]{cursor:pointer;user-select:none}th[data-ls]:hover{color:var(--ink)}.sw2{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:1px}
 th[data-sort]{cursor:pointer;user-select:none}th[data-sort]:hover{color:var(--ink)}th .ar{display:inline-block;width:10px;color:var(--accent)}
 .pb{display:inline-block;width:54px;height:6px;border-radius:3px;background:#eceff3;vertical-align:middle;margin-right:8px;overflow:hidden}.pb i{display:block;height:100%;border-radius:3px}
 tr.row{cursor:pointer}tr.row:hover td{background:#fafbfc}tr.pre td:first-child{color:var(--mute)}tr.more{display:none}.open tr.more{display:table-row}
@@ -613,7 +621,7 @@ cov_naver:['네이버 수집률','네이버 로봇이 한 번이라도 가져간
 cov_google:['구글 수집률','구글 로봇이 한 번이라도 가져간 주소 ÷ 공개 주소입니다.'],
 rsc:['수집 낭비','네이버 로봇이 페이지 대신 화면 전환용 보조 파일(_rsc)을 가져간 횟수입니다. 하루 수집 한도를 깎아 먹습니다.'],
 e404:['없는 주소 요청','없는 주소를 요청해 404가 나간 횟수입니다. 삭제한 주소나 잘못 걸린 링크가 있으면 늘어납니다.'],
-src:['유입 경로','방문이 시작될 때 어디서 왔는지입니다. 주소를 직접 치거나 앱에서 열어 경로가 안 남으면 "직접·알 수 없음"으로 셉니다.'],
+src:['유입 경로','방문이 시작될 때 어디서 왔는지입니다. 매체는 네이버 검색 / 구글 검색 / 다음·빙 / 네이버 블로그·플레이스·카페 / 직접 / 그 밖(다른 사이트·SNS·카카오)으로 나눕니다. 주소를 직접 치거나 앱에서 열어 경로가 안 남으면 "직접·알 수 없음"으로 셉니다.'],
 ptype:['페이지 유형','메인 / 허브·서비스(지역 목록, 소개, 서비스 안내) / 지역·키워드(대량 제작 페이지) / 콘텐츠(블로그 글)로 나눕니다.'],
 kw:['검색어','검색 결과에서 넘어올 때 검색어가 함께 넘어온 경우만 보입니다. 네이버와 구글은 대부분 검색어를 넘겨주지 않아 일부만 잡힙니다.'],
 land:['들어온 페이지','방문이 시작된 첫 페이지입니다. 검색에 걸려 있는 페이지가 무엇인지 알 수 있습니다.'],
@@ -631,7 +639,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const f=n=>n?Number(n).toLocaleString('ko-KR'):'<span class="zero">0</span>';
 const pct=(a,b)=>b?(Math.round(a/b*1000)/10)+'%':'-';
 const h=(k,t)=>`<span data-h="${k}">${esc(t||HELP[k][0])}</span>`;
-let D=null,range=30,win=7,sortK=1,sortDir=-1,query='';const cache={};
+let D=null,range=30,win=7,lsort='all',sortK=1,sortDir=-1,query='';const cache={};
 const day=n=>{const d=new Date(D.today+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-n);return d.toISOString().slice(0,10)};
 const searchOf=x=>(x.src_naver||0)+(x.src_google||0)+(x.src_daum||0)+(x.src_bing||0);
 const val=(x,k)=>typeof k==='function'?k(x):(x[k]||0);
@@ -688,6 +696,8 @@ const charts=[];function draw(){charts.forEach(c=>c())}
 function dayTable(days,cols){return `<details><summary>날짜별 표로 보기</summary><div class="scroll"><table><tr><th>날짜</th>${cols.map(c=>`<th>${esc(c[0])}</th>`).join('')}</tr>${days.slice().reverse().map(x=>`<tr><td>${x.d}${x.est?'<span class="tag">추정</span>':''}</td>${cols.map(c=>`<td>${f(val(x,c[1]))}</td>`).join('')}</tr>`).join('')}</table></div></details>`}
 const estNote=days=>days.some(x=>x.est)?`<p class="note">그래프의 회색 구간은 ${h('est','추정한 값')}입니다. ${D.exact_from?esc(D.exact_from)+'부터는 사이트별로 정확히 셉니다.':'아직 사이트별 기록이 없습니다.'}</p>`:'';
 const VS=[{k:'visitors',t:'방문자',c:C.visit},{k:searchOf,t:'검색 유입',c:C.search}],BS=[{k:'bot_google',t:'구글 수집',c:C.google},{k:'bot_naver',t:'네이버 수집',c:C.naver}];
+const MED=[['naver','네이버 검색','var(--naver)'],['google','구글 검색','var(--google)'],['search_etc','다음·빙','var(--search)'],['naver_etc','네이버 블로그·플레이스','var(--visit)'],['direct','직접·알 수 없음','#8792a2'],['other','그 밖','#c3cad4']];
+const MS=[{k:'src_naver',t:'네이버 검색',c:C.naver},{k:'src_google',t:'구글 검색',c:C.google},{k:x=>(x.src_daum||0)+(x.src_bing||0),t:'다음·빙',c:C.search},{k:'src_direct',t:'직접·알 수 없음',c:'#8792a2'}];
 const made=s=>s.total+s.left_pages+s.left_posts,RNG=[[14,'14일'],[30,'30일'],[45,'45일']];
 const plink=(s,p)=>`<a href="https://${esc(s.host)}${esc(encodeURI(p))}" target="_blank" rel="noopener noreferrer">${esc(p)}</a>`;
 
@@ -732,7 +742,9 @@ async function site(id,tab){
   topbar(s.name+(s.preview?' (미리보기)':''),TABS.find(x=>x[0]===tab)[1]+' · 갱신 '+esc(s.updated),tab==='visits'?'':seg('range',RNG,range));
   let body='';charts.length=0;
   if(!tab){
-    const types=Object.entries(W.type).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>[TYPE[k]||k,v[0],`검색 ${v[1]}`]);
+    const mt=c=>MED.reduce((a,m)=>a+(c[m[0]]||0),0),sv=c=>lsort==='all'?mt(c):(c[lsort]||0),mth=MED.map(m=>`<th data-ls="${m[0]}"><i class="sw2" style="background:${m[2]}"></i>${m[1]}<span class="ar">${lsort===m[0]?'▾':''}</span></th>`).join(''),mtd=c=>MED.map(m=>`<td>${f(c[m[0]])}</td>`).join('');
+    const land=W.land.slice().sort((a,b)=>sv(b[2])-sv(a[2])).filter(p=>sv(p[2])>0),msum={};W.land.forEach(p=>MED.forEach(m=>{const n=p[2][m[0]]||0;if(n&&(!msum[m[0]]||n>msum[m[0]][1]))msum[m[0]]=[p[0],n]}));
+    const mtotal=MED.map(m=>[m,m[0]==='naver'?(W.src.naver||0):m[0]==='google'?(W.src.google||0):m[0]==='search_etc'?(W.src.daum||0)+(W.src.bing||0):m[0]==='naver_etc'?['naver_blog','naver_place','naver_cafe','naver_etc'].reduce((a,k)=>a+(W.src[k]||0),0):m[0]==='direct'?(W.src.direct||0):['site','sns','kakao'].reduce((a,k)=>a+(W.src[k]||0),0)]),mall=mtotal.reduce((a,x)=>a+x[1],0);
     body=`<div class="kpis">${kpi('visitors','users','c-visit',f(sum(d,'visitors',w,y)),delta(sum(d,'visitors',w,y),sum(d,'visitors',day(14),day(8))),'방문자 7일')}
     ${kpi('search','bot','c-search',f(sum(d,searchOf,w,y)),delta(sum(d,searchOf,w,y),sum(d,searchOf,day(14),day(8))),'검색 유입 7일')}
     ${kpi('tel','phone','c-ink',f(sum(d,'tel',w)),`카톡 ${sum(d,'kakao',w).toLocaleString('ko-KR')}`,'전화 클릭 7일')}
@@ -741,14 +753,15 @@ async function site(id,tab){
     ${kpi('cov_google','bot','c-google',pct(s.crawl.google,s.total),`${s.crawl.google.toLocaleString('ko-KR')} / ${s.total.toLocaleString('ko-KR')}`)}</div>
     <div class="grid3"><div class="card"><div class="chead"><h2>방문자와 검색 유입</h2>${legend(VS)}</div><div class="chart" id="c1"></div>${dayTable(ds,[['방문자','visitors'],['방문','visits'],['조회','views'],['검색 유입',searchOf],['전화 클릭','tel']])}</div>
     <div class="card"><div class="chead"><h2>${h('src')}</h2>${seg('win',[[7,'7일'],[14,'14일']],win)}</div>${donut(W.src)}</div></div>
-    <div class="grid2"><div class="card flush"><div class="chead"><h2>${h('land')}</h2><span class="mute small">최근 ${win}일</span></div>${tbl('<th>페이지</th><th>유형</th><th>방문</th><th>그중 검색</th>',W.land.map(p=>`<tr><td class="wrap">${plink(s,p[0])}</td><td>${TYPE[p[3]]||''}</td><td>${f(p[1])}</td><td>${f(p[2])}</td></tr>`),'이 기간에 방문이 없습니다')}</div>
-    <div class="card flush"><div class="chead"><h2>${h('kw')}</h2><span class="mute small">최근 ${win}일</span></div>${tbl('<th>검색어</th><th>검색</th><th>방문</th>',W.kw.map(k=>`<tr><td class="wrap">${esc(k[0])}</td><td>${esc((SRC[k[1]]||k[1]).replace(' 검색',''))}</td><td>${f(k[2])}</td></tr>`),'검색어가 넘어온 방문이 없습니다')}</div></div>
-    <div class="grid2"><div class="card"><div class="chead"><h2>들어온 ${h('ptype')}</h2><span class="mute small">최근 ${win}일</span></div>${hbars(types,'이 기간에 방문이 없습니다','var(--visit)')}<p class="mute small" style="margin:12px 0 0">공개된 주소: ${Object.entries(s.types).map(([k,v])=>`${TYPE[k]||k} ${v.toLocaleString('ko-KR')}`).join(' · ')}</p></div>
+    <div class="grid3"><div class="card"><div class="chead"><h2>매체별 방문 추이</h2>${legend(MS)}</div><div class="chart" id="c3"></div>${dayTable(ds,MS.map(x=>[x.t,x.k]))}</div>
+    <div class="card flush"><div class="chead"><h2>매체별 요약</h2><span class="mute small">최근 ${win}일</span></div><div class="scroll"><table><tr><th>매체</th><th>방문</th><th>비율</th><th class="l">가장 많이 들어온 페이지</th></tr>${mtotal.map(([m,n])=>`<tr><td><i class="sw2" style="background:${m[2]}"></i>${m[1]}</td><td>${f(n)}</td><td>${pct(n,mall)}</td><td class="l wrap">${msum[m[0]]?plink(s,msum[m[0]][0])+` <span class="mute small">${msum[m[0]][1]}</span>`:'<span class="zero">-</span>'}</td></tr>`).join('')}</table></div></div></div>
+    <div class="card flush full"><div class="chead"><div><h2>${h('land')} · 매체별</h2><div class="mute small">최근 ${win}일 · 매체 이름을 누르면 그 매체로 많이 들어온 순서로 바뀝니다</div></div>${lsort==='all'?'':'<button type="button" class="morebtn" style="width:auto;border:1px solid var(--line);border-radius:10px;padding:6px 12px" data-ls="all">전체 순서로</button>'}</div>${tbl(`<th>페이지</th><th>유형</th><th data-ls="all">전체<span class="ar">${lsort==='all'?'▾':''}</span></th>${mth}`,land.map(p=>`<tr><td class="wrap">${plink(s,p[0])}</td><td>${TYPE[p[1]]||''}</td><td><b>${f(mt(p[2]))}</b></td>${mtd(p[2])}</tr>`),'이 기간에 방문이 없습니다',10)}</div>
+    <div class="grid2"><div class="card flush"><div class="chead"><div><h2>들어온 ${h('ptype')} · 매체별</h2><div class="mute small">공개된 주소: ${Object.entries(s.types).map(([k,v])=>`${TYPE[k]||k} ${v.toLocaleString('ko-KR')}`).join(' · ')}</div></div></div><div class="scroll"><table><tr><th>유형</th><th>전체</th>${MED.map(m=>`<th><i class="sw2" style="background:${m[2]}"></i>${m[1]}</th>`).join('')}</tr>${Object.entries(W.type).sort((a,b)=>mt(b[1])-mt(a[1])).map(([k,c])=>`<tr><td>${TYPE[k]||esc(k)}</td><td><b>${f(mt(c))}</b></td>${mtd(c)}</tr>`).join('')||'<tr><td class="mute l" colspan="8">이 기간에 방문이 없습니다</td></tr>'}</table></div></div>
     <div class="card"><div class="chead"><h2>시간대별 조회</h2><span class="mute small">최근 14일</span></div><div class="chart" id="c2"></div></div></div>
     <div class="grid2"><div class="card"><div class="chead"><h2>기기</h2><span class="mute small">최근 ${win}일</span></div>${hbars(Object.entries(W.dev).sort((a,b)=>b[1]-a[1]),'이 기간에 방문이 없습니다')}</div>
-    <div class="card"><div class="chead"><h2>링크를 걸어 준 곳</h2><span class="mute small">최근 ${win}일</span></div>${hbars(W.ref,'다른 사이트에서 넘어온 방문이 없습니다')}</div></div>
+    <div class="card"><div class="chead"><h2>링크를 걸어 준 곳</h2><span class="mute small">최근 ${win}일</span></div>${hbars(W.ref,'다른 사이트에서 넘어온 방문이 없습니다')}${W.kw.length?`<div class="chead" style="margin-top:18px"><h2>${h('kw')}</h2></div>${hbars(W.kw.map(k=>[k[0],k[2],(SRC[k[1]]||k[1]).replace(' 검색','')]))}`:''}</div></div>
     <div class="card flush"><div class="chead"><h2>많이 본 페이지</h2><span class="mute small">최근 14일</span></div>${tbl(`<th>페이지</th><th>유형</th><th>${h('views')}</th>`,s.top.map(p=>`<tr><td class="wrap">${plink(s,p[0])}</td><td>${TYPE[p[2]]||''}</td><td>${f(p[1])}</td></tr>`),'자료 없음')}</div>`;
-    charts.push(()=>lineChart($('#c1'),ds,VS),()=>barChart($('#c2'),s.hours,'조회'));
+    charts.push(()=>lineChart($('#c1'),ds,VS),()=>lineChart($('#c3'),ds,MS),()=>barChart($('#c2'),s.hours,'조회'));
   }else if(tab==='visits'){
     const srcs=[...new Set(s.visits.map(v=>v.src))];
     body=`<div class="card flush"><div class="chead" style="padding-bottom:14px"><div><h2>최근 방문 ${s.visits.length.toLocaleString('ko-KR')}건</h2><div class="mute small">${h('visits','방문')} 한 건은 한 사람이 이어서 본 묶음입니다. 줄을 누르면 본 순서가 펼쳐집니다. IP는 끝자리를 가렸습니다.</div></div>
@@ -817,6 +830,7 @@ addEventListener('hashchange',()=>route().then(()=>scrollTo(0,0)));
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(draw,150)});
 document.addEventListener('click',e=>{const pop=$('#pop');if(pop&&pop.classList.contains('open'))pop.classList.remove('open');
   const b=e.target.closest('[data-seg] button');if(b){const n=b.parentNode.dataset.seg;if(n==='range')range=+b.dataset.v;else win=+b.dataset.v;const y=scrollY;route().then(()=>scrollTo(0,y));return}
+  const ls=e.target.closest('[data-ls]');if(ls){lsort=ls.dataset.ls;const y=scrollY;route().then(()=>scrollTo(0,y));return}
   const m=e.target.closest('.morebtn');if(m){const o=m.parentNode.classList.toggle('open');m.textContent=o?'접기':`전체 ${m.dataset.more}줄 보기`;return}
   const tr=e.target.closest('tr[data-go]');if(tr)location.hash=tr.dataset.go});
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-h]');if(t&&HELP[t.dataset.h])showTip(e,`<b>${esc(HELP[t.dataset.h][0])}</b><div>${esc(HELP[t.dataset.h][1])}</div>`)});
