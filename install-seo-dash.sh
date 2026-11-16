@@ -16,6 +16,7 @@ cat > /opt/seo-dash/dash.py <<'DASH_PY_EOF'
 쓰는 것: $DASH_OUT/data.json(전체 현황) · site-<호스트>.json(사이트 상세) — dash_app.py 가 로그인한 사람에게만 내준다.
         $DASH_STATE/state.json (날짜별 집계·수집된 경로·IndexNow 대기열·도메인 등록일)
 --indexnow: 새로 열린 주소를 네이버·IndexNow 로 보낸다(미리보기 사이트 제외). 거절한 창구에만 다음 실행 때 다시.
+--push <대시보드 주소>: 다른 서버에서 돌 때 — 결과를 대시보드 서버의 /api/push 로 올린다(그 서버가 다음 수집 때 합친다).
 
 방문 = 같은 IP·브라우저가 30분 넘게 쉬지 않고 이어 본 묶음. 전화 클릭 = 사이트의 tel: 링크를 누를 때 보내는 /_t?e=tel 요청.
 """
@@ -360,16 +361,15 @@ def main():
                       e404=a['e404'].most_common(15), hours=[a['hours'].get(h, 0) for h in range(24)],
                       visits=[{k: v for k, v in x.items() if k != 'd' and not k.startswith('_')} for x in sess[:400]])
         json.dump(detail, open(os.path.join(OUT, f'site-{s["id"]}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
-    rf = os.path.join(STATE, 'remotes.txt')   # 다른 서버 수집기의 결과 주소(한 줄에 하나) — 그쪽 사이트를 이 화면에 합친다
-    for base in ([l.strip().rstrip('/') for l in open(rf, encoding='utf-8') if l.strip() and not l.startswith('#')] if os.path.exists(rf) else []):
+    for rd in sorted(glob.glob(os.path.join(OUT, 'remote', '*'))):   # 다른 서버 수집기가 올려 둔 결과(dash_app.py /api/push) — 그쪽 사이트를 이 화면에 합친다
         try:
-            get = lambda n: urllib.request.urlopen(f'{base}/{n}', timeout=30).read()
-            for x in json.loads(get('data.json'))['sites']:
-                if not re.fullmatch(r'[a-z0-9.-]{1,120}', x.get('id', '')): continue
-                open(os.path.join(OUT, f'site-{x["id"]}.json'), 'wb').write(get(f'site-{x["id"]}.json'))
-                data['sites'] = [y for y in data['sites'] if y['id'] != x['id']] + [x]
+            for x in json.load(open(os.path.join(rd, 'data.json'), encoding='utf-8'))['sites']:
+                f = os.path.join(rd, f'site-{x.get("id", "")}.json')
+                if not re.fullmatch(r'[a-z0-9.-]{1,120}', x.get('id', '')) or not os.path.isfile(f): continue
+                open(os.path.join(OUT, f'site-{x["id"]}.json'), 'wb').write(open(f, 'rb').read())
+                data['sites'] = [y for y in data['sites'] if y['id'] != x['id']] + [dict(x, node=os.path.basename(rd))]
         except Exception as e:
-            print(f'  다른 서버 자료를 못 받음: {urllib.parse.urlparse(base).netloc} {str(e)[:80]}')
+            print(f'  다른 서버 자료를 못 읽음: {os.path.basename(rd)} {str(e)[:80]}')
     data['sites'].sort(key=lambda x: (x['preview'], -x['total']))
     json.dump(state, open(sp, 'w', encoding='utf-8'), ensure_ascii=False)
     json.dump(data, open(os.path.join(OUT, 'data.json'), 'w', encoding='utf-8'), ensure_ascii=False)
@@ -381,8 +381,23 @@ def main():
               + (f' · IndexNow {i}' if i and i.get('date') == TODAY else '') + (f' · 점검 {x["health"]}' if x['health'] else ''))
 
 
+def push(base):
+    """이 서버의 결과를 대시보드 서버로 올린다. 토큰은 $DASH_STATE/push_token_node, 서버 이름은 $DASH_NODE(없으면 호스트 이름)."""
+    tok = open(os.path.join(STATE, 'push_token_node')).read().strip()
+    node = re.sub(r'[^a-z0-9-]', '', (E('DASH_NODE') or socket.gethostname()).lower())[:30] or 'node'
+    res = Counter()
+    for f in [os.path.join(OUT, 'data.json')] + sorted(glob.glob(os.path.join(OUT, 'site-*.json'))):
+        req = urllib.request.Request(f'{base.rstrip("/")}/api/push/{os.path.basename(f)}', open(f, 'rb').read(),
+                                     {'Content-Type': 'application/json', 'X-Dash-Token': tok, 'X-Dash-Node': node})
+        try: res[urllib.request.urlopen(req, timeout=60).status] += 1
+        except urllib.error.HTTPError as e: res[e.code] += 1
+        except Exception as e: res[str(e)[:50]] += 1
+    print(f'  대시보드로 올림({node}): {dict(res)}')
+
+
 if __name__ == '__main__':
     main()
+    if '--push' in sys.argv: push(sys.argv[sys.argv.index('--push') + 1])
 DASH_PY_EOF
 
 cat > /opt/seo-dash/dash_app.py <<'DASH_APP_EOF'
@@ -478,8 +493,26 @@ class H(http.server.BaseHTTPRequestHandler):
             if os.path.isfile(f): return self.send(200, open(f, 'rb').read(), 'application/json; charset=utf-8')
         self.send(404, 'not found', 'text/plain')
 
+    def push(self, name):
+        """다른 서버의 수집기가 결과 파일을 올린다 — 로그인 대신 토큰($DASH_STATE/push_token)으로 확인한다."""
+        tf = os.path.join(STATE, 'push_token')
+        tok = open(tf).read().strip() if os.path.isfile(tf) else ''
+        node = re.sub(r'[^a-z0-9-]', '', self.headers.get('X-Dash-Node', '').lower())[:30]
+        n = int(self.headers.get('Content-Length') or 0)
+        if not tok or not node or not hmac.compare_digest(self.headers.get('X-Dash-Token', ''), tok): return self.send(403, '{"error":"token"}', 'application/json')
+        if not 0 < n <= 8_000_000: return self.send(413, '{"error":"size"}', 'application/json')
+        raw = self.rfile.read(n)
+        try: json.loads(raw)
+        except Exception: return self.send(400, '{"error":"json"}', 'application/json')
+        d = os.path.join(OUT, 'remote', node); os.makedirs(d, exist_ok=True)
+        tmp = os.path.join(d, name + '.tmp')
+        open(tmp, 'wb').write(raw); os.replace(tmp, os.path.join(d, name))
+        self.send(200, '{"ok":true}', 'application/json')
+
     def do_POST(self):
         p = urllib.parse.urlparse(self.path).path
+        m = re.fullmatch(r'/api/push/((?:data|site-[a-z0-9.-]{1,120})\.json)', p)
+        if m: return self.push(m.group(1))
         ip = self.headers.get('X-Real-IP') or self.client_address[0]
         a = load_auth()
         if p == '/login':
@@ -882,6 +915,8 @@ if [ ! -f /var/lib/seo-dash/auth.json ]; then
   [ -f /root/seo-dash-password.txt ] || { openssl rand -hex 6 > /root/seo-dash-password.txt; chmod 600 /root/seo-dash-password.txt; }
   python3 /opt/seo-dash/dash_app.py --set-password < /root/seo-dash-password.txt
 fi
+
+[ -f /var/lib/seo-dash/push_token ] || { openssl rand -hex 24 > /var/lib/seo-dash/push_token; chmod 600 /var/lib/seo-dash/push_token; }   # 다른 서버 수집기가 결과를 올릴 때 쓰는 토큰
 
 # 3) 화면 서버 (127.0.0.1:8791, nginx 가 앞에서 받는다)
 cat > /etc/systemd/system/seo-dash.service <<'EOF'
