@@ -818,29 +818,26 @@ systemctl daemon-reload
 systemctl enable -q seo-dash
 systemctl restart seo-dash
 
-# 4) 대시보드 주소 — 예전(파일을 그대로 보여 주던) 설정이면 화면 서버로 넘기도록 바꾼다
+# 4) 대시보드 주소 — 도메인 없이 서버 IP 의 포트 하나로 연다 (예전 도메인 설정은 이 파일로 바뀐다)
 NG=/etc/nginx/sites-available/seo-dash
-PROXY='    location / { proxy_pass http://127.0.0.1:8791; proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-Proto $scheme; }'
-if [ ! -f "$NG" ]; then
-  printf 'server {\n    listen 80;\n    server_name ops.172.237.20.244.sslip.io;\n%s\n}\n' "$PROXY" > "$NG"
-elif ! grep -q proxy_pass "$NG"; then
-  cp "$NG" /root/seo-dash.nginx.bak
-  python3 - "$NG" "$PROXY" <<'EOF'
-import re, sys
-p, proxy = sys.argv[1], sys.argv[2]
-t = open(p).read()
-t = re.sub(r'^[ \t]*root /var/www/seo-dash;[ \t]*$', lambda m: proxy, t, count=1, flags=re.M)
-t = re.sub(r'^[ \t]*(index index\.html;|auth_basic[^\n]*)[ \t]*\n', '', t, flags=re.M)
-open(p, 'w').write(t)
+OTHER=$(grep -lE "server_name[^;]* seo.jd8.co.kr( |;)" /etc/nginx/sites-enabled/* 2>/dev/null | grep -v "/seo-dash$" || true)
+[ -z "$OTHER" ] || { echo "!! 같은 주소(포트)를 이미 쓰는 nginx 설정이 있음: $OTHER"; exit 1; }
+[ -f "$NG" ] && cp "$NG" /root/seo-dash.nginx.bak
+cat > "$NG" <<'EOF'
+server {
+    listen 80;
+    server_name seo.jd8.co.kr;
+    add_header X-Robots-Tag "noindex, nofollow" always;
+    location / { proxy_pass http://127.0.0.1:8791; proxy_set_header Host $http_host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-Proto $scheme; }
+}
 EOF
-fi
 ln -sf "$NG" /etc/nginx/sites-enabled/seo-dash
 if nginx -t; then systemctl reload nginx
 else
   [ -f /root/seo-dash.nginx.bak ] && cp /root/seo-dash.nginx.bak "$NG" || rm -f /etc/nginx/sites-enabled/seo-dash
   rm -f /etc/nginx/conf.d/vhostlog.conf; echo "!! nginx 설정 오류 — 추가한 설정을 되돌림"; exit 1
 fi
-grep -q "ssl" "$NG" || certbot --nginx -d ops.172.237.20.244.sslip.io --agree-tos --register-unsafely-without-email --redirect -n || echo "(HTTPS 발급 실패 — http 로 사용)"
+grep -q "ssl" "$NG" || certbot --nginx -d seo.jd8.co.kr --agree-tos --register-unsafely-without-email --redirect -n || echo "(HTTPS 발급 실패 — http 로 사용)"
 rm -rf /var/www/seo-dash /etc/nginx/.seo-dash.htpasswd   # 예전 방식의 공개 폴더·브라우저 비밀번호 창은 더 쓰지 않는다
 
 # 5) 하루 두 번 갱신 (서버가 deploy 브랜치를 받은 뒤)
@@ -855,5 +852,5 @@ echo "== 수집 실행"
 python3 /opt/seo-dash/dash.py --indexnow | tee -a /var/log/seo-dash.log
 echo
 echo "화면 서버: $(systemctl is-active seo-dash) · 로그인 화면 응답 $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8791/login)"
-echo "대시보드: $(grep -q ssl "$NG" && echo https || echo http)://ops.172.237.20.244.sslip.io/"
+echo "대시보드: $(grep -q ssl "$NG" && echo https || echo http)://seo.jd8.co.kr/"
 echo "아이디 admin / 처음 비밀번호는 /root/seo-dash-password.txt (화면에서 바꾸면 그 파일은 옛 값이 된다)"
