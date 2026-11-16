@@ -517,58 +517,73 @@ cat > /opt/seo-dash/app.html <<'DASH_HTML_EOF'
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>사이트 운영 현황</title>
 <style>
-:root{color-scheme:light;--side:#14181d;--side-ink:#c9d0d8;--bg:#f3f4f6;--card:#fff;--ink:#16191d;--mute:#5f6772;--line:#dfe3e8;--soft:#eef0f3;
---naver:#0a8f4d;--google:#2b62d9;--search:#c2540a;--visit:#6b4fbb;--bar:#55657a;--bad:#b3261e;--est:#e9ebef}
+:root{color-scheme:light;--side:#111418;--side-ink:#aab2bd;--bg:#f3f4f7;--card:#fff;--ink:#15181d;--mute:#667080;--line:#e8ebef;--soft:#f5f6f8;
+--naver:#0a8f4d;--google:#2b62d9;--search:#c2540a;--visit:#6b4fbb;--bar:#6b7a90;--bad:#c0291f;--good:#0a8f4d;--est:#eef0f3;--accent:#f39221;--r:14px}
 *{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--ink);font:14px/1.5 Pretendard,system-ui,'Malgun Gothic',sans-serif}
-a{color:inherit}button,select,input{font:inherit;color:inherit}
-.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
-aside{background:var(--side);color:var(--side-ink);padding:20px 0;position:sticky;top:0;height:100vh;overflow-y:auto}
-aside .brand{padding:0 20px 16px;color:#fff;font-weight:800;font-size:16px;letter-spacing:-.01em;border-bottom:1px solid #262c34}
-aside .grp{padding:16px 20px 6px;font-size:11px;color:#7d8794;letter-spacing:.06em}
-aside a{display:flex;justify-content:space-between;gap:8px;padding:7px 20px;text-decoration:none;border-left:3px solid transparent;font-size:13px}
-aside a:hover{background:#1c2229;color:#fff}aside a.on{background:#1c2229;color:#fff;border-left-color:#fff}
-aside a .n{color:#7d8794;font-variant-numeric:tabular-nums}aside a.pre{color:#7d8794}
-aside form{padding:6px 20px}aside form button{background:none;border:0;padding:0;color:#7d8794;cursor:pointer;font-size:13px;text-decoration:underline;text-underline-offset:3px}
-.mnav{display:none}
-main{padding:28px 32px 80px;min-width:0}
-h1{font-size:22px;margin:0;letter-spacing:-.02em}h2{font-size:14px;margin:0 0 10px}
-.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-.mute{color:var(--mute)}.small{font-size:12px}.num{font-variant-numeric:tabular-nums}
-.note{border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:0 0 16px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));background:var(--card);border:1px solid var(--line);border-right:0;border-bottom:0;margin-bottom:20px}
-.tile{padding:14px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}.tile .lab{font-size:12px;color:var(--mute)}.tile b{display:block;font-size:24px;line-height:1.25;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.tile small{color:var(--mute);font-size:12px}.up{color:var(--naver)}.down{color:var(--bad)}
-[data-h]{cursor:help;border-bottom:1px dotted #a5adb8}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-bottom:20px}
-.card{background:var(--card);border:1px solid var(--line);padding:16px;min-width:0}.card.full{margin-bottom:20px}
-.chead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}.chead h2{margin:0}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute)}.legend i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px}
-.seg{display:inline-flex;border:1px solid var(--line)}.seg button{background:var(--card);border:0;border-right:1px solid var(--line);padding:5px 12px;cursor:pointer;font-size:12px}
-.seg button:last-child{border-right:0}.seg button.on{background:var(--ink);color:#fff}
-.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin:0 0 20px}.tabs a{padding:9px 16px;text-decoration:none;color:var(--mute);border-bottom:2px solid transparent;margin-bottom:-1px}
-.tabs a.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+a{color:inherit}button,select,input{font:inherit;color:inherit}svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.shell{display:grid;grid-template-columns:228px minmax(0,1fr);min-height:100vh}
+aside{background:var(--side);color:var(--side-ink);padding:22px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:800;font-size:16px;letter-spacing:-.01em;padding:0 8px 20px}
+.brand i{width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:#111}
+aside .grp{padding:16px 10px 6px;font-size:11px;color:#6b7482;letter-spacing:.06em}
+aside a,aside button.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;text-decoration:none;font-size:14px;background:none;border:0;width:100%;text-align:left;cursor:pointer;color:inherit}
+aside a:hover,aside button.nav:hover{background:#1b2027;color:#fff}aside a.on{background:#232931;color:#fff}aside a.on svg{color:var(--accent)}
+aside .sp{flex:1}
+main{padding:0 28px 80px;min-width:0}
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 0;position:sticky;top:0;background:var(--bg);z-index:6}
+.topbar .grow{flex:1;min-width:0}
+h1{font-size:22px;margin:0;letter-spacing:-.02em;line-height:1.3}h2{font-size:15px;margin:0;letter-spacing:-.01em}
+.mute{color:var(--mute)}.small{font-size:12px}
+.sw{position:relative}.swbtn{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;cursor:pointer;min-width:220px;max-width:320px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.swbtn b{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.swbtn:hover{border-color:#cfd5dd}
+.pop{position:absolute;top:calc(100% + 6px);left:0;width:340px;max-width:92vw;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(16,24,40,.14);padding:10px;display:none;z-index:8}
+.pop.open{display:block}.pop input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--soft);outline:0}.pop input:focus{border-color:#aab2bd;background:#fff}
+.pop .list{max-height:380px;overflow-y:auto;margin-top:8px}.pop .g{font-size:11px;color:var(--mute);padding:8px 8px 4px;letter-spacing:.04em}
+.pop a{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:9px;text-decoration:none}.pop a:hover,.pop a.on{background:var(--soft)}.pop a span:last-child{color:var(--mute);font-variant-numeric:tabular-nums;font-size:12px}
+.seg{display:inline-flex;background:#e9ecf0;border-radius:10px;padding:3px}.seg button{background:none;border:0;padding:6px 12px;cursor:pointer;font-size:13px;border-radius:8px;color:var(--mute)}
+.seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.tabs{display:none}
+.note{background:#fff7ea;border:1px solid #f6dfb8;color:#6b4a12;border-radius:10px;padding:8px 12px;margin:0 0 16px;font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:18px}
+@media(min-width:1100px){.kpis.k4{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.kpi .kh{display:flex;align-items:center;gap:10px;color:var(--mute);font-size:13px;margin-bottom:10px}
+.chip{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+.c-visit{background:#efeafb;color:var(--visit)}.c-search{background:#fdf0e3;color:var(--search)}.c-naver{background:#e5f5ec;color:var(--naver)}.c-google{background:#e8effd;color:var(--google)}.c-ink{background:#eceff3;color:#3a4350}.c-bad{background:#fdecea;color:var(--bad)}
+.kpi b{display:block;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums;letter-spacing:-.02em}.kpi .ks{margin-top:6px;font-size:12px;color:var(--mute);min-height:18px}
+.dl{display:inline-block;padding:1px 7px;border-radius:6px;font-weight:600;font-variant-numeric:tabular-nums;margin-right:6px}.dl.up{background:#e5f5ec;color:var(--good)}.dl.down{background:#fdecea;color:var(--bad)}.dl.flat{background:#eceff3;color:var(--mute)}
+[data-h]{cursor:help;border-bottom:1px dotted #b3bbc6}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:18px;margin-bottom:18px}.grid3{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(320px,1fr);gap:18px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0;box-shadow:0 1px 2px rgba(16,24,40,.04)}.card.full{margin-bottom:18px}.card.flush{padding:0;overflow:hidden}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.card.flush .chead{padding:16px 18px 0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute)}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
-th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th{font-size:12px;font-weight:600;color:var(--mute);background:var(--soft)}
-th:first-child,td:first-child,th.l,td.l{text-align:left}td.wrap{white-space:normal;word-break:break-all;max-width:420px}
-tr.row{cursor:pointer}tr.row:hover td{background:#f7f8fa}tr.pre td:first-child{color:var(--mute)}
-.zero{color:#a5adb8}.warn{color:var(--bad);font-weight:600}
-.hb{display:grid;grid-template-columns:minmax(110px,180px) 1fr 86px;gap:10px;align-items:center;padding:5px 0;font-size:13px}
-.hb .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hb .b{height:10px;background:var(--soft)}.hb .b i{display:block;height:100%;background:var(--bar);border-radius:0 2px 2px 0}
-.hb .v{text-align:right;font-variant-numeric:tabular-nums}
+th,td{padding:10px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th{font-size:12px;font-weight:600;color:var(--mute);background:var(--soft)}
+tr:last-child td{border-bottom:0}th:first-child,td:first-child,th.l,td.l{text-align:left}td.wrap{white-space:normal;word-break:break-all;max-width:420px}
+th[data-sort]{cursor:pointer;user-select:none}th[data-sort]:hover{color:var(--ink)}th .ar{display:inline-block;width:10px;color:var(--accent)}
+tr.row{cursor:pointer}tr.row:hover td{background:#fafbfc}tr.pre td:first-child{color:var(--mute)}tr.more{display:none}.open tr.more{display:table-row}
+.morebtn{display:block;width:100%;background:var(--soft);border:0;border-top:1px solid var(--line);padding:10px;cursor:pointer;color:var(--mute);font-size:13px}.morebtn:hover{color:var(--ink)}
+.card:not(.flush) .morebtn{border:1px solid var(--line);border-radius:10px;margin-top:10px}
+.zero{color:#b3bbc6}.warn{color:var(--bad);font-weight:600}.ok{color:var(--good);font-weight:600}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:6px;background:#eceff3;color:var(--mute);margin-left:6px;font-weight:500}
+.hb{display:grid;grid-template-columns:minmax(110px,170px) 1fr 92px;gap:10px;align-items:center;padding:6px 0;font-size:13px}
+.hb .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hb .b{height:8px;background:var(--soft);border-radius:4px;overflow:hidden}.hb .b i{display:block;height:100%;background:var(--bar);border-radius:4px}.hb .v{text-align:right;font-variant-numeric:tabular-nums}
+.donut{display:grid;grid-template-columns:170px 1fr;gap:18px;align-items:center}.donut ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:13px}
+.donut li{display:grid;grid-template-columns:14px 1fr auto auto;gap:8px;align-items:center}.donut li i{width:10px;height:10px;border-radius:3px}.donut li b{font-variant-numeric:tabular-nums}.donut li span:last-child{color:var(--mute);font-size:12px;width:44px;text-align:right}
 .chart{position:relative}.chart svg{display:block;width:100%}
-#tip{position:fixed;z-index:9;pointer-events:none;background:#16191d;color:#fff;padding:8px 10px;font-size:12px;line-height:1.5;max-width:300px;display:none}
-#tip i{display:inline-block;width:8px;height:8px;margin-right:6px}#tip b{font-variant-numeric:tabular-nums}
-.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.filters select,.filters input,.form input{border:1px solid var(--line);background:var(--card);padding:7px 10px;border-radius:0}
+#tip{position:fixed;z-index:20;pointer-events:none;background:#15181d;color:#fff;padding:9px 11px;font-size:12px;line-height:1.55;max-width:300px;border-radius:10px;display:none;box-shadow:0 8px 20px rgba(0,0,0,.2)}
+#tip i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}#tip b{font-variant-numeric:tabular-nums}
+.filters{display:flex;gap:8px;flex-wrap:wrap}.filters select,.filters input,.form input{border:1px solid var(--line);background:var(--card);padding:8px 12px;border-radius:10px;outline:0}.filters input:focus,.form input:focus{border-color:#aab2bd}
 .trail{background:var(--soft);white-space:normal;text-align:left;line-height:1.9}.trail span{color:var(--mute)}
-.tag{display:inline-block;font-size:11px;padding:0 5px;border:1px solid var(--line);color:var(--mute);margin-left:6px}
-.form{max-width:360px;display:grid;gap:10px}.form label{display:grid;gap:4px;font-size:12px;color:var(--mute)}
-.btn{background:var(--ink);color:#fff;border:0;padding:10px 16px;cursor:pointer;font-weight:600}
-dl.gloss{margin:0;display:grid;grid-template-columns:200px 1fr;border-top:1px solid var(--line)}dl.gloss dt,dl.gloss dd{margin:0;padding:10px 12px;border-bottom:1px solid var(--line)}dl.gloss dt{font-weight:600;background:var(--soft)}
-details summary{cursor:pointer;color:var(--mute);font-size:12px;margin-top:10px}
-@media(max-width:860px){.shell{grid-template-columns:minmax(0,1fr)}aside{display:none}.mnav{display:flex;gap:8px;background:var(--side);padding:10px 16px;position:sticky;top:0;z-index:5}
-.mnav select{flex:1;background:#1c2229;color:#fff;border:1px solid #2f3741;padding:8px}main{padding:20px 16px 60px}.grid2{grid-template-columns:1fr}dl.gloss{grid-template-columns:1fr}dl.gloss dt{border-bottom:0}}
+.form{max-width:360px;display:grid;gap:12px}.form label{display:grid;gap:5px;font-size:12px;color:var(--mute)}
+.btn{background:var(--ink);color:#fff;border:0;padding:11px 16px;cursor:pointer;font-weight:600;border-radius:10px}
+dl.gloss{margin:0;display:grid;grid-template-columns:190px 1fr}dl.gloss dt,dl.gloss dd{margin:0;padding:11px 4px;border-bottom:1px solid var(--line)}dl.gloss dt{font-weight:600}dl.gloss dd{color:#3a4350}
+details summary{cursor:pointer;color:var(--mute);font-size:12px;margin-top:12px}details .scroll{margin-top:8px;border:1px solid var(--line);border-radius:10px}
+.sitehead{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin:-4px 0 16px;font-size:12px;color:var(--mute)}.sitehead a{color:var(--ink)}
+@media(max-width:900px){.shell{grid-template-columns:minmax(0,1fr)}aside{display:none}main{padding:0 14px 60px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}.donut{grid-template-columns:1fr}dl.gloss{grid-template-columns:1fr}dl.gloss dt{border-bottom:0;padding-bottom:0}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px}.tabs a{padding:7px 12px;border-radius:9px;background:var(--card);border:1px solid var(--line);text-decoration:none;white-space:nowrap;font-size:13px}.tabs a.on{background:var(--ink);color:#fff;border-color:var(--ink)}.swbtn{min-width:0;max-width:none;width:100%}.sw,.topbar .grow{flex:1 0 100%}.topbar{position:static;padding:14px 0}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:12px}.kpi b{font-size:22px}}
 </style></head><body>
-<div class="shell"><aside id="side"></aside><div><div class="mnav"><select id="msel" aria-label="화면 이동"></select></div><main id="main"><p class="mute">불러오는 중</p></main></div></div>
+<div class="shell"><aside id="side"></aside><main><div class="topbar" id="top"></div><div id="main"><p class="mute">불러오는 중</p></div></main></div>
 <div id="tip" role="tooltip"></div>
 <script>
 const HELP={
@@ -580,8 +595,8 @@ tel:['전화 클릭','사이트의 전화 버튼을 누른 횟수입니다. 실�
 total:['공개 주소','지금 검색 로봇에게 열려 있는 주소 수입니다. 사이트맵에 올라 있는 페이지와 블로그 글을 모두 셉니다.'],
 made:['전체 제작','만들어 둔 주소 전체입니다. 공개 주소에 아직 열리지 않은 페이지와 예약된 글을 더한 수입니다.'],
 left:['남은 수','만들어 뒀지만 아직 열리지 않은 페이지와 글입니다. 일정에 따라 자동으로 열립니다.'],
-new_pages:['오늘 열림','오늘 새로 공개된 페이지 수입니다. 대시보드 설치일(2026-11-16)은 기준일이라 0이고 그다음 날부터 셉니다.'],
-new_posts:['오늘 발행','오늘 새로 공개된 블로그 글 수입니다. 설치일은 기준일이라 0입니다.'],
+new_pages:['오늘 열림','오늘 새로 공개된 페이지 수입니다. 대시보드가 그 사이트를 처음 본 날은 기준일이라 0이고 그다음 날부터 셉니다.'],
+new_posts:['오늘 발행','오늘 새로 공개된 블로그 글 수입니다. 기준일은 0입니다.'],
 bot_naver:['네이버 수집','네이버 검색 로봇(Yeti)이 페이지를 정상으로 가져간 횟수입니다. 가져가야 색인이 됩니다.'],
 bot_google:['구글 수집','구글 검색 로봇(Googlebot)이 페이지를 정상으로 가져간 횟수입니다.'],
 cov_naver:['네이버 수집률','네이버 로봇이 한 번이라도 가져간 주소 ÷ 공개 주소입니다. 100%에 가까울수록 사이트 전체를 로봇이 본 것입니다.'],
@@ -599,156 +614,197 @@ health:['점검','표본 30쪽을 열어 파일이 있는지, 대표 주소(cano
 const SRC={naver:'네이버 검색',google:'구글 검색',daum:'다음 검색',bing:'빙 검색',naver_blog:'네이버 블로그',naver_place:'네이버 플레이스·지도',naver_cafe:'네이버 카페',naver_etc:'네이버 기타',kakao:'카카오',sns:'SNS',site:'다른 사이트',direct:'직접·알 수 없음'};
 const TYPE={home:'메인',hub:'허브·서비스',kw:'지역·키워드',post:'콘텐츠(글)'};
 const C={naver:'var(--naver)',google:'var(--google)',search:'var(--search)',visit:'var(--visit)'};
+const IC={grid:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',pulse:'M3 12h4l3-8 4 16 3-8h4',users:'M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M21 20v-1a4 4 0 0 0-3-3.9M15.5 4.2a3.5 3.5 0 0 1 0 6.6',bot:'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14M20 20l-4-4',cal:'M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1M8 3v5M16 3v5M4 11h16',book:'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11',key:'M14 10a4 4 0 1 0-3.5 3.9L12 15.5V18h2.5v2H17v-3l-3.6-3.6A4 4 0 0 0 14 10M9 9h.01',out:'M10 4H5v16h5M15 8l4 4-4 4M19 12H9',down:'M6 9l6 6 6-6',phone:'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 4 5a2 2 0 0 1 2-2',globe:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',file:'M7 3h7l5 5v13H7zM14 3v5h5',eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',alert:'M12 4l9 16H3zM12 10v4M12 17h.01',plus:'M12 5v14M5 12h14',ban:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M6 6l12 12'};
+const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${IC[n]}"/></svg>`;
 const $=s=>document.querySelector(s),main=$('#main'),tip=$('#tip');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const f=n=>n?Number(n).toLocaleString('ko-KR'):'<span class="zero">0</span>';
 const pct=(a,b)=>b?(Math.round(a/b*1000)/10)+'%':'-';
 const h=(k,t)=>`<span data-h="${k}">${esc(t||HELP[k][0])}</span>`;
-let D=null,range=30,win=7;const cache={};
+let D=null,range=30,win=7,sortK=1,sortDir=-1,query='';const cache={};
 const day=n=>{const d=new Date(D.today+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-n);return d.toISOString().slice(0,10)};
 const searchOf=x=>(x.src_naver||0)+(x.src_google||0)+(x.src_daum||0)+(x.src_bing||0);
 const val=(x,k)=>typeof k==='function'?k(x):(x[k]||0);
 const sum=(days,k,from,to)=>days.reduce((a,x)=>a+(x.d>=from&&(!to||x.d<=to)?val(x,k):0),0);
-function delta(cur,prev){if(!prev)return'<small>비교할 이전 값 없음</small>';const p=Math.round((cur-prev)/prev*100);return `<small class="${p>0?'up':p<0?'down':''}">${p>0?'▲':p<0?'▼':''} ${Math.abs(p)}% <span class="mute">이전 ${f(prev)}</span></small>`}
-const tile=(k,v,sub,label)=>`<div class="tile"><span class="lab">${h(k,label)}</span><b>${v}</b>${sub||''}</div>`;
+function delta(cur,prev,label){if(!prev)return `<span class="dl flat">-</span>${label||'비교할 이전 값 없음'}`;const p=Math.round((cur-prev)/prev*100);return `<span class="dl ${p>0?'up':p<0?'down':'flat'}">${p>0?'▲':p<0?'▼':''} ${Math.abs(p)}%</span>이전 ${Number(prev).toLocaleString('ko-KR')}`}
+const kpi=(k,icon,cls,v,sub,label)=>`<div class="kpi"><div class="kh"><span class="chip ${cls}">${ic(icon)}</span>${h(k,label)}</div><b>${v}</b><div class="ks">${sub||''}</div></div>`;
 function series(days,n){const m=Object.fromEntries(days.map(x=>[x.d,x]));const out=[];for(let i=n-1;i>=0;i--){const d=day(i);out.push(m[d]||{d,est:D.exact_from&&d>=D.exact_from?0:1})}return out}
 function merge(sites){const m={};sites.forEach(s=>s.days.forEach(x=>{const o=m[x.d]||(m[x.d]={d:x.d,est:x.est});for(const k in x)if(typeof x[k]==='number'&&k!=='est')o[k]=(o[k]||0)+x[k];o.est=o.est&&x.est}));return Object.values(m)}
 
-/* 그래프: 선(추이) — 가로축 날짜, 세로축 하나, 마우스를 올리면 날짜와 값 */
+/* 추이 그래프: 가로축 날짜, 세로축 하나. 첫 계열은 면으로 채우고, 마우스를 올리면 날짜와 값 */
 function lineChart(el,days,ser){
-  const W=Math.max(320,el.clientWidth),H=220,L=44,R=14,T=10,B=26,n=days.length;
+  const W=Math.max(320,el.clientWidth),H=240,L=44,R=14,T=12,B=28,n=days.length,id='g'+Math.random().toString(36).slice(2,7);
   const max=Math.max(4,...days.flatMap(x=>ser.map(s=>val(x,s.k)))),step=Math.pow(10,Math.floor(Math.log10(max))),top=Math.ceil(max/step)*step;
   const X=i=>L+(n>1?i*(W-L-R)/(n-1):0),Y=v=>T+(H-T-B)*(1-v/top);
-  let g='';for(let i=0;i<=4;i++){const v=top*i/4,y=Y(v);g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="#e6e9ed"/><text x="${L-8}" y="${y+4}" text-anchor="end" font-size="11" fill="#5f6772">${Math.round(v).toLocaleString('ko-KR')}</text>`}
-  const estN=days.filter(x=>x.est).length;if(estN)g=`<rect x="${L}" y="${T}" width="${Math.max(0,X(Math.min(estN,n-1))-L)}" height="${H-T-B}" fill="var(--est)"/>`+g;
-  const every=Math.ceil(n/7);days.forEach((x,i)=>{if(i%every===0||i===n-1)g+=`<text x="${X(i)}" y="${H-8}" text-anchor="${i===n-1?'end':'middle'}" font-size="11" fill="#5f6772">${x.d.slice(5)}</text>`});
-  ser.forEach(s=>{g+=`<polyline fill="none" stroke="${s.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${days.map((x,i)=>X(i)+','+Y(val(x,s.k))).join(' ')}"/><circle cx="${X(n-1)}" cy="${Y(val(days[n-1],s.k))}" r="3.5" fill="${s.c}" stroke="#fff" stroke-width="2"/>`});
-  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(ser.map(s=>s.t).join(', '))} 날짜별 추이">${g}<line id="x" y1="${T}" y2="${H-B}" stroke="#16191d" stroke-width="1" visibility="hidden"/><rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent"/></svg>`;
-  const svg=el.firstChild,cross=svg.querySelector('#x');
+  let g=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ser[0].c}" stop-opacity=".2"/><stop offset="1" stop-color="${ser[0].c}" stop-opacity="0"/></linearGradient></defs>`;
+  const estN=days.filter(x=>x.est).length;if(estN)g+=`<rect x="${L}" y="${T}" width="${Math.max(0,X(Math.min(estN,n-1))-L)}" height="${H-T-B}" fill="var(--est)" rx="6"/>`;
+  for(let i=0;i<=4;i++){const v=top*i/4,y=Y(v);g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="#eceef1" stroke-dasharray="${i?'3 4':''}"/><text x="${L-8}" y="${y+4}" text-anchor="end" font-size="11" fill="#667080">${Math.round(v).toLocaleString('ko-KR')}</text>`}
+  const every=Math.ceil(n/7);days.forEach((x,i)=>{if(i%every===0||i===n-1)g+=`<text x="${X(i)}" y="${H-8}" text-anchor="${i===n-1?'end':'middle'}" font-size="11" fill="#667080">${x.d.slice(5)}</text>`});
+  const pts=k=>days.map((x,i)=>X(i)+','+Y(val(x,k))).join(' ');
+  g+=`<polygon fill="url(#${id})" points="${X(0)},${Y(0)} ${pts(ser[0].k)} ${X(n-1)},${Y(0)}"/>`;
+  ser.forEach(s=>{g+=`<polyline fill="none" stroke="${s.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts(s.k)}"/>`});
+  ser.forEach((s,j)=>{g+=`<circle class="pt${j}" r="4.5" fill="${s.c}" stroke="#fff" stroke-width="2" cx="${X(n-1)}" cy="${Y(val(days[n-1],s.k))}"/>`});
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(ser.map(s=>s.t).join(', '))} 날짜별 추이">${g}<line id="x" y1="${T}" y2="${H-B}" stroke="#15181d" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/><rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent"/></svg>`;
+  const svg=el.firstChild,cross=svg.querySelector('#x'),move=i=>ser.forEach((s,j)=>{const c=svg.querySelector('.pt'+j);c.setAttribute('cx',X(i));c.setAttribute('cy',Y(val(days[i],s.k)))});
   svg.onmousemove=e=>{const r=svg.getBoundingClientRect(),px=(e.clientX-r.left)*W/r.width,i=Math.max(0,Math.min(n-1,Math.round((px-L)/((W-L-R)/Math.max(1,n-1))))),x=days[i];
-    cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.setAttribute('visibility','visible');
+    cross.setAttribute('x1',X(i));cross.setAttribute('x2',X(i));cross.setAttribute('visibility','visible');move(i);
     showTip(e,`<div>${x.d}${x.est?' · 추정':''}</div>`+ser.map(s=>`<div><i style="background:${s.c}"></i>${esc(s.t)} <b>${val(x,s.k).toLocaleString('ko-KR')}</b></div>`).join(''))};
-  svg.onmouseleave=()=>{cross.setAttribute('visibility','hidden');tip.style.display='none'}}
-/* 그래프: 막대(시간대) */
+  svg.onmouseleave=()=>{cross.setAttribute('visibility','hidden');move(n-1);tip.style.display='none'}}
 function barChart(el,vals,label){
-  const W=Math.max(320,el.clientWidth),H=170,L=36,R=8,T=8,B=24,n=vals.length,max=Math.max(4,...vals),bw=(W-L-R)/n;
-  let g=`<line x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}" stroke="#cfd5dc"/><text x="${L-8}" y="${T+8}" text-anchor="end" font-size="11" fill="#5f6772">${max.toLocaleString('ko-KR')}</text>`;
-  vals.forEach((v,i)=>{const bh=(H-T-B)*v/max;g+=`<rect data-i="${i}" x="${L+i*bw+1}" y="${H-B-bh}" width="${Math.max(2,bw-2)}" height="${bh}" rx="2" fill="var(--bar)"/><rect data-i="${i}" x="${L+i*bw}" y="${T}" width="${bw}" height="${H-T-B}" fill="transparent"/>`;
-    if(i%3===0)g+=`<text x="${L+i*bw+bw/2}" y="${H-7}" text-anchor="middle" font-size="11" fill="#5f6772">${i}시</text>`});
+  const W=Math.max(320,el.clientWidth),H=190,L=36,R=8,T=10,B=26,n=vals.length,max=Math.max(4,...vals),bw=(W-L-R)/n;
+  let g=`<line x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}" stroke="#dfe3e8"/><text x="${L-8}" y="${T+8}" text-anchor="end" font-size="11" fill="#667080">${max.toLocaleString('ko-KR')}</text>`;
+  vals.forEach((v,i)=>{const bh=(H-T-B)*v/max,w=Math.max(3,bw-6);g+=`<rect x="${L+i*bw+(bw-w)/2}" y="${H-B-bh}" width="${w}" height="${bh}" rx="${Math.min(4,w/2)}" fill="var(--visit)" opacity="${v===max?1:.55}"/><rect data-i="${i}" x="${L+i*bw}" y="${T}" width="${bw}" height="${H-T-B}" fill="transparent"/>`;
+    if(i%3===0)g+=`<text x="${L+i*bw+bw/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="#667080">${i}시</text>`});
   el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(label)}">${g}</svg>`;
   el.firstChild.onmousemove=e=>{const i=e.target.dataset.i;if(i==null){tip.style.display='none';return}showTip(e,`<div>${i}시 ~ ${+i+1}시</div><div>${esc(label)} <b>${vals[i].toLocaleString('ko-KR')}</b></div>`)};
   el.firstChild.onmouseleave=()=>tip.style.display='none'}
-function showTip(e,html){tip.innerHTML=html;tip.style.display='block';const w=tip.offsetWidth,x=e.clientX+14+w>innerWidth?e.clientX-w-14:e.clientX+14;tip.style.left=x+'px';tip.style.top=Math.min(innerHeight-tip.offsetHeight-8,e.clientY+14)+'px'}
+/* 도넛: 유입 경로 비중. 색은 경로마다 고정, 값과 비율은 옆 목록에 글자로 */
+const SRCG=[['네이버 검색',['naver'],'var(--naver)'],['구글 검색',['google'],'var(--google)'],['다음·빙 검색',['daum','bing'],'var(--search)'],['네이버 블로그·플레이스·카페',['naver_blog','naver_place','naver_cafe','naver_etc'],'var(--visit)'],['직접·알 수 없음',['direct'],'#8792a2'],['그 밖(다른 사이트·SNS·카카오)',['site','sns','kakao'],'#c3cad4']];
+function donut(src){const items=SRCG.map(g=>({t:g[0],v:g[1].reduce((a,k)=>a+(src[k]||0),0),c:g[2]})).filter(x=>x.v),tot=items.reduce((a,x)=>a+x.v,0);
+  if(!tot)return '<p class="mute small">이 기간에 방문이 없습니다</p>';
+  const R=70,r=46,cx=85,cy=85;let a0=-Math.PI/2,g='';
+  items.forEach((x,i)=>{const a1=a0+x.v/tot*Math.PI*2,big=a1-a0>Math.PI?1:0,p=(a,rad)=>[cx+rad*Math.cos(a),cy+rad*Math.sin(a)].map(n=>n.toFixed(2)).join(' ');
+    g+=items.length===1?`<circle cx="${cx}" cy="${cy}" r="${(R+r)/2}" fill="none" stroke="${x.c}" stroke-width="${R-r}" data-i="${i}"/>`:`<path data-i="${i}" d="M${p(a0,R)} A${R} ${R} 0 ${big} 1 ${p(a1,R)} L${p(a1,r)} A${r} ${r} 0 ${big} 0 ${p(a0,r)}Z" fill="${x.c}" stroke="#fff" stroke-width="2"/>`;a0=a1});
+  return `<div class="donut" data-donut='${esc(JSON.stringify(items.map(x=>[x.t,x.v])))}'><svg viewBox="0 0 170 170" width="170" height="170" role="img" aria-label="유입 경로 비중">${g}<text x="${cx}" y="${cy-2}" text-anchor="middle" font-size="22" font-weight="700" fill="#15181d">${tot.toLocaleString('ko-KR')}</text><text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="11" fill="#667080">방문</text></svg>
+  <ul>${items.map(x=>`<li><i style="background:${x.c}"></i><span>${esc(x.t)}</span><b>${x.v.toLocaleString('ko-KR')}</b><span>${pct(x.v,tot)}</span></li>`).join('')}</ul></div>`}
+function showTip(e,html){tip.innerHTML=html;tip.style.display='block';const w=tip.offsetWidth,x=e.clientX+14+w>innerWidth?e.clientX-w-14:e.clientX+14;tip.style.left=Math.max(6,x)+'px';tip.style.top=Math.min(innerHeight-tip.offsetHeight-8,e.clientY+14)+'px'}
 const legend=ser=>`<div class="legend">${ser.map(s=>`<span><i style="background:${s.c}"></i>${esc(s.t)}</span>`).join('')}</div>`;
-function hbars(items,unit){const max=Math.max(1,...items.map(x=>x[1]));return items.length?items.map(x=>`<div class="hb"><span class="t" title="${esc(x[0])}">${esc(x[0])}</span><span class="b"><i style="width:${x[1]/max*100}%"></i></span><span class="v">${f(x[1])}${x[2]!=null?` <span class="mute small">${esc(x[2])}</span>`:''}</span></div>`).join(''):`<p class="mute small">${unit||'자료 없음'}</p>`}
+function hbars(items,empty,color){const max=Math.max(1,...items.map(x=>x[1]));return items.length?items.map(x=>`<div class="hb"><span class="t" title="${esc(x[0])}">${esc(x[0])}</span><span class="b"><i style="width:${x[1]/max*100}%${color?';background:'+color:''}"></i></span><span class="v">${f(x[1])}${x[2]!=null?` <span class="mute small">${esc(x[2])}</span>`:''}</span></div>`).join(''):`<p class="mute small">${empty||'자료 없음'}</p>`}
 const seg=(name,opts,cur)=>`<span class="seg" data-seg="${name}">${opts.map(o=>`<button type="button" data-v="${o[0]}" class="${o[0]==cur?'on':''}">${o[1]}</button>`).join('')}</span>`;
+/* 긴 표는 앞의 몇 줄만 보여 주고 버튼으로 펼친다 */
+function tbl(head,rows,empty,limit=8){const cols=(head.match(/<th/g)||[]).length;
+  return `<div class="fold"><div class="scroll"><table><tr>${head}</tr>${rows.map((r,i)=>r.replace('<tr','<tr'+(i>=limit?' class="more"':''))).join('')||`<tr><td class="mute l" colspan="${cols}">${empty}</td></tr>`}</table></div>${rows.length>limit?`<button type="button" class="morebtn" data-more="${rows.length}">전체 ${rows.length}줄 보기</button>`:''}</div>`}
 const charts=[];function draw(){charts.forEach(c=>c())}
-function dayTable(days,cols){return `<details><summary>날짜별 표로 보기</summary><div class="scroll"><table><tr><th>날짜</th>${cols.map(c=>`<th>${esc(c[0])}</th>`).join('')}</tr>${days.slice().reverse().map(x=>`<tr><td>${x.d}${x.est?' <span class="tag">추정</span>':''}</td>${cols.map(c=>`<td>${f(val(x,c[1]))}</td>`).join('')}</tr>`).join('')}</table></div></details>`}
-const estNote=()=>`<p class="note small mute">${D.exact_from?`${D.exact_from}부터는 사이트별로 정확히 셉니다. 그래프의 회색 구간은 그 전 날짜를 `:'아직 사이트별 기록이 없어 모든 날짜가 '}${h('est','추정한 값')}입니다.</p>`;
-const VS=[{k:'visitors',t:'방문자',c:C.visit},{k:searchOf,t:'검색 유입',c:C.search}],BS=[{k:'bot_naver',t:'네이버 수집',c:C.naver},{k:'bot_google',t:'구글 수집',c:C.google}];
-const made=s=>s.total+s.left_pages+s.left_posts;
+function dayTable(days,cols){return `<details><summary>날짜별 표로 보기</summary><div class="scroll"><table><tr><th>날짜</th>${cols.map(c=>`<th>${esc(c[0])}</th>`).join('')}</tr>${days.slice().reverse().map(x=>`<tr><td>${x.d}${x.est?'<span class="tag">추정</span>':''}</td>${cols.map(c=>`<td>${f(val(x,c[1]))}</td>`).join('')}</tr>`).join('')}</table></div></details>`}
+const estNote=days=>days.some(x=>x.est)?`<p class="note">그래프의 회색 구간은 ${h('est','추정한 값')}입니다. ${D.exact_from?esc(D.exact_from)+'부터는 사이트별로 정확히 셉니다.':'아직 사이트별 기록이 없습니다.'}</p>`:'';
+const VS=[{k:'visitors',t:'방문자',c:C.visit},{k:searchOf,t:'검색 유입',c:C.search}],BS=[{k:'bot_google',t:'구글 수집',c:C.google},{k:'bot_naver',t:'네이버 수집',c:C.naver}];
+const made=s=>s.total+s.left_pages+s.left_posts,RNG=[[14,'14일'],[30,'30일'],[45,'45일']];
+const plink=(s,p)=>`<a href="https://${esc(s.host)}${esc(encodeURI(p))}" target="_blank" rel="noopener noreferrer">${esc(p)}</a>`;
+
+const COLS=[['사이트',s=>s.name,null],['visitors',(s,c)=>sum(s.days,'visitors',c.y,c.y),'방문자 어제'],['search',(s,c)=>sum(s.days,searchOf,c.w,c.y),'검색 유입 7일'],['tel',(s,c)=>sum(s.days,'tel',c.w),'전화 7일'],['total',s=>s.total],['made',s=>made(s)],['new_pages',(s,c)=>sum(s.days,'new_pages',c.t,c.t)],['new_posts',(s,c)=>sum(s.days,'new_posts',c.t,c.t)],['bot_naver',(s,c)=>sum(s.days,'bot_naver',c.w,c.y),'네이버 수집 7일'],['bot_google',(s,c)=>sum(s.days,'bot_google',c.w,c.y),'구글 수집 7일'],['cov_naver',s=>s.total?s.crawl.naver/s.total:0],['cov_google',s=>s.total?s.crawl.google/s.total:0],['health',s=>Object.keys(s.health||{}).length]];
+function siteRows(){const c={y:day(1),w:day(7),t:D.today},q=query.trim().toLowerCase();
+  const rows=D.sites.filter(s=>!q||s.name.toLowerCase().includes(q)||s.host.includes(q)).map(s=>({s,v:COLS.map(col=>col[1](s,c))}));
+  rows.sort((a,b)=>(a.s.preview-b.s.preview)||((typeof a.v[sortK]==='string'?a.v[sortK].localeCompare(b.v[sortK],'ko'):a.v[sortK]-b.v[sortK])*sortDir));
+  $('#st').innerHTML=`<tr>${COLS.map((col,i)=>`<th data-sort="${i}">${i?h(col[0],col[2]):'사이트'}<span class="ar">${i===sortK?(sortDir<0?'▾':'▴'):''}</span></th>`).join('')}</tr>`+
+  (rows.map(({s,v})=>`<tr class="row${s.preview?' pre':''}" data-go="#/s/${esc(s.id)}"><td>${esc(s.name)}${s.preview?'<span class="tag">미리보기</span>':''}</td>${v.slice(1,10).map(x=>`<td>${f(x)}</td>`).join('')}<td>${pct(s.crawl.naver,s.total)}</td><td>${pct(s.crawl.google,s.total)}</td><td>${v[12]?`<span class="warn">확인 필요 ${v[12]}</span>`:'<span class="ok">정상</span>'}</td></tr>`).join('')||`<tr><td class="mute l" colspan="13">찾는 사이트가 없습니다</td></tr>`)}
 
 function overview(){
-  const live=D.sites.filter(s=>!s.preview),all=merge(live),y=day(1),w=day(7),t=D.today;
-  const tot=fn=>live.reduce((a,s)=>a+fn(s),0),dsum=(k,a,b)=>sum(all,k,a,b);
-  const bad=live.filter(s=>Object.keys(s.health||{}).length);
-  main.innerHTML=`<div class="head"><div><h1>전체 현황</h1><div class="mute small">운영 사이트 ${live.length}곳 · 미리보기 ${D.sites.length-live.length}곳 · 갱신 ${esc(D.updated)}</div></div>${seg('range',[[14,'14일'],[30,'30일'],[45,'45일']],range)}</div>
-  ${estNote()}
-  <div class="tiles">${tile('visitors',f(dsum('visitors',y,y)),delta(dsum('visitors',y,y),dsum('visitors',day(2),day(2))),'어제 방문자')}
-  ${tile('search',f(dsum(searchOf,w,y)),delta(dsum(searchOf,w,y),dsum(searchOf,day(14),day(8))),'검색 유입 7일')}
-  ${tile('tel',f(dsum('tel',w)),'<small>최근 7일</small>','전화 클릭 7일')}
-  ${tile('total',f(tot(s=>s.total)),`<small>전체 제작 ${f(tot(made))}</small>`)}
-  ${tile('new_pages',f(dsum('new_pages',t,t)),`<small>발행 글 ${f(dsum('new_posts',t,t))}</small>`)}
-  ${tile('bot_naver',f(dsum('bot_naver',y,y)),'<small>어제</small>','어제 네이버 수집')}
-  ${tile('bot_google',f(dsum('bot_google',y,y)),'<small>어제</small>','어제 구글 수집')}
-  ${tile('health',bad.length?`<span class="warn">${bad.length}곳</span>`:'이상 없음',bad.length?`<small>${esc(bad.map(s=>s.name).join(', '))}</small>`:'<small>전체 정상</small>','점검')}</div>
-  <div class="grid2"><div class="card"><div class="chead"><h2>방문자와 검색 유입 (운영 사이트 합계)</h2>${legend(VS)}</div><div class="chart" id="c1"></div>${dayTable(series(all,range),[['방문자','visitors'],['방문','visits'],['검색 유입',searchOf],['전화 클릭','tel']])}</div>
-  <div class="card"><div class="chead"><h2>검색 로봇 수집 (운영 사이트 합계)</h2>${legend(BS)}</div><div class="chart" id="c2"></div>${dayTable(series(all,range),[['네이버','bot_naver'],['구글','bot_google'],['수집 낭비','rsc_naver']])}</div></div>
-  <div class="card full"><h2>사이트별</h2><div class="scroll"><table><tr><th>사이트</th><th>${h('visitors','방문자 어제')}</th><th>${h('search','검색 유입 7일')}</th><th>${h('tel','전화 7일')}</th><th>${h('total')}</th><th>${h('made')}</th><th>${h('new_pages')}</th><th>${h('new_posts')}</th><th>${h('bot_naver','네이버 수집 7일')}</th><th>${h('bot_google','구글 수집 7일')}</th><th>${h('cov_naver')}</th><th>${h('cov_google')}</th><th>${h('health')}</th></tr>
-  ${D.sites.map(s=>{const b=Object.keys(s.health||{}).length,d=s.days;return `<tr class="row${s.preview?' pre':''}" data-go="#/s/${esc(s.id)}"><td>${esc(s.name)}${s.preview?'<span class="tag">미리보기</span>':''}</td><td>${f(sum(d,'visitors',y,y))}</td><td>${f(sum(d,searchOf,w,y))}</td><td>${f(sum(d,'tel',w))}</td><td>${f(s.total)}</td><td>${f(made(s))}</td><td>${f(sum(d,'new_pages',t,t))}</td><td>${f(sum(d,'new_posts',t,t))}</td><td>${f(sum(d,'bot_naver',w,y))}</td><td>${f(sum(d,'bot_google',w,y))}</td><td>${pct(s.crawl.naver,s.total)}</td><td>${pct(s.crawl.google,s.total)}</td><td>${b?`<span class="warn">확인 필요 ${b}</span>`:'정상'}</td></tr>`}).join('')}</table></div>
-  <p class="mute small">줄을 누르면 그 사이트의 상세 화면으로 갑니다. 점선 밑줄이 있는 이름에 마우스를 올리면 뜻이 나옵니다.</p></div>`;
-  charts.length=0;charts.push(()=>lineChart($('#c1'),series(all,range),VS),()=>lineChart($('#c2'),series(all,range),BS));draw()}
+  const live=D.sites.filter(s=>!s.preview),all=merge(live),y=day(1),w=day(7),t=D.today,ds=series(all,range);
+  const tot=fn=>live.reduce((a,s)=>a+fn(s),0),dsum=(k,a,b)=>sum(all,k,a,b),bad=live.filter(s=>Object.keys(s.health||{}).length);
+  const src={};live.forEach(s=>s.days.forEach(x=>{if(x.d>=w)for(const k in x)if(k.startsWith('src_'))src[k.slice(4)]=(src[k.slice(4)]||0)+x[k]}));
+  topbar('전체 현황',`운영 사이트 ${live.length}곳${D.sites.length-live.length?` · 미리보기 ${D.sites.length-live.length}곳`:''} · 갱신 ${esc(D.updated)}`,seg('range',RNG,range));
+  main.innerHTML=`${estNote(ds)}
+  <div class="kpis k4">${kpi('visitors','users','c-visit',f(dsum('visitors',y,y)),delta(dsum('visitors',y,y),dsum('visitors',day(2),day(2))),'어제 방문자')}
+  ${kpi('search','bot','c-search',f(dsum(searchOf,w,y)),delta(dsum(searchOf,w,y),dsum(searchOf,day(14),day(8))),'검색 유입 7일')}
+  ${kpi('tel','phone','c-ink',f(dsum('tel',w)),'최근 7일','전화 클릭 7일')}
+  ${kpi('total','file','c-ink',f(tot(s=>s.total)),`전체 제작 ${tot(made).toLocaleString('ko-KR')}`)}
+  ${kpi('new_pages','plus','c-ink',f(dsum('new_pages',t,t)),`오늘 발행 글 ${dsum('new_posts',t,t).toLocaleString('ko-KR')}`)}
+  ${kpi('bot_naver','bot','c-naver',f(dsum('bot_naver',y,y)),`7일 ${dsum('bot_naver',w,y).toLocaleString('ko-KR')}`,'어제 네이버 수집')}
+  ${kpi('bot_google','bot','c-google',f(dsum('bot_google',y,y)),`7일 ${dsum('bot_google',w,y).toLocaleString('ko-KR')}`,'어제 구글 수집')}
+  ${kpi('health',bad.length?'alert':'eye',bad.length?'c-bad':'c-naver',bad.length?`<span class="warn">${bad.length}곳</span>`:'정상',bad.length?esc(bad.map(s=>s.name).join(', ')):'전체 이상 없음','점검')}</div>
+  <div class="grid3"><div class="card"><div class="chead"><h2>방문자와 검색 유입</h2>${legend(VS)}</div><div class="chart" id="c1"></div>${dayTable(ds,[['방문자','visitors'],['방문','visits'],['검색 유입',searchOf],['전화 클릭','tel']])}</div>
+  <div class="card"><div class="chead"><h2>${h('src')} <span class="mute small">최근 7일</span></h2></div>${donut(src)}</div></div>
+  <div class="card full"><div class="chead"><h2>검색 로봇 수집</h2>${legend(BS)}</div><div class="chart" id="c2"></div>${dayTable(ds,[['네이버','bot_naver'],['구글','bot_google'],['수집 낭비','rsc_naver']])}</div>
+  <div class="card flush"><div class="chead" style="padding-bottom:14px"><h2>사이트별</h2><div class="filters"><input id="sq" type="search" placeholder="사이트 찾기" aria-label="사이트 찾기" value="${esc(query)}"></div></div><div class="scroll"><table id="st"></table></div></div>
+  <p class="mute small" style="margin-top:10px">줄을 누르면 그 사이트로 갑니다. 표 머리를 누르면 그 값으로 정렬됩니다. 점선 밑줄이 있는 이름에 마우스를 올리면 뜻이 나옵니다.</p>`;
+  siteRows();$('#sq').oninput=e=>{query=e.target.value;siteRows()};
+  $('#st').onclick=e=>{const th=e.target.closest('th[data-sort]');if(th){const i=+th.dataset.sort;if(i===sortK)sortDir=-sortDir;else{sortK=i;sortDir=i?-1:1}siteRows()}};
+  charts.length=0;charts.push(()=>lineChart($('#c1'),ds,VS),()=>lineChart($('#c2'),ds,BS));draw()}
 
+const TABS=[['','개요','pulse'],['visits','방문 기록','users'],['crawl','수집·색인','bot'],['publish','공개·발행','cal']];
 async function site(id,tab){
   const s=cache[id]||(cache[id]=await api('site/'+id));if(!s)return;
-  const d=s.days,y=day(1),w=day(7),t=D.today,W=win==7?s.w7:s.w14,bad=Object.entries(s.health||{});
+  const d=s.days,y=day(1),w=day(7),t=D.today,W=win==7?s.w7:s.w14,bad=Object.entries(s.health||{}),ds=series(d,range);
   const age=s.created?Math.floor((new Date(t)-new Date(s.created))/864e5):null;
-  const tabs=[['','개요'],['visits','방문 기록'],['crawl','수집·색인'],['publish','공개·발행']];
+  topbar(s.name+(s.preview?' (미리보기)':''),TABS.find(x=>x[0]===tab)[1]+' · 갱신 '+esc(s.updated),tab==='visits'?'':seg('range',RNG,range));
   let body='';charts.length=0;
   if(!tab){
     const types=Object.entries(W.type).sort((a,b)=>b[1][0]-a[1][0]).map(([k,v])=>[TYPE[k]||k,v[0],`검색 ${v[1]}`]);
-    body=`<div class="tiles">${tile('visitors',f(sum(d,'visitors',w,y)),delta(sum(d,'visitors',w,y),sum(d,'visitors',day(14),day(8))),'방문자 7일')}
-    ${tile('search',f(sum(d,searchOf,w,y)),delta(sum(d,searchOf,w,y),sum(d,searchOf,day(14),day(8))),'검색 유입 7일')}
-    ${tile('tel',f(sum(d,'tel',w)),`<small>카톡 ${f(sum(d,'kakao',w))}</small>`,'전화 클릭 7일')}
-    ${tile('total',f(s.total),`<small>전체 제작 ${f(made(s))}</small>`)}
-    ${tile('cov_naver',pct(s.crawl.naver,s.total),`<small>${f(s.crawl.naver)} / ${f(s.total)}</small>`)}
-    ${tile('cov_google',pct(s.crawl.google,s.total),`<small>${f(s.crawl.google)} / ${f(s.total)}</small>`)}</div>
-    <div class="card full"><div class="chead"><h2>방문자와 검색 유입</h2><span>${legend(VS)}</span>${seg('range',[[14,'14일'],[30,'30일'],[45,'45일']],range)}</div><div class="chart" id="c1"></div>${dayTable(series(d,range),[['방문자','visitors'],['방문','visits'],['조회','views'],['검색 유입',searchOf],['전화 클릭','tel']])}</div>
-    <div class="head" style="margin:0 0 10px"><h2 style="margin:0">어디서 어떻게 들어왔는지</h2>${seg('win',[[7,'최근 7일'],[14,'최근 14일']],win)}</div>
-    <div class="grid2"><div class="card"><h2>${h('src')}</h2>${hbars(Object.entries(W.src).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[SRC[k]||k,v]),'이 기간에 방문이 없습니다')}</div>
-    <div class="card"><h2>들어온 ${h('ptype')}</h2>${hbars(types,'이 기간에 방문이 없습니다')}<p class="mute small">공개된 주소: ${Object.entries(s.types).map(([k,v])=>`${TYPE[k]||k} ${v.toLocaleString('ko-KR')}`).join(' · ')}</p></div></div>
-    <div class="grid2"><div class="card"><h2>${h('land')} 상위</h2><div class="scroll"><table><tr><th>페이지</th><th>유형</th><th>방문</th><th>그중 검색</th></tr>${W.land.map(p=>`<tr><td class="wrap"><a href="https://${esc(s.host)}${esc(encodeURI(p[0]))}" target="_blank" rel="noopener noreferrer">${esc(p[0])}</a></td><td>${TYPE[p[3]]||''}</td><td>${f(p[1])}</td><td>${f(p[2])}</td></tr>`).join('')||'<tr><td class="mute" colspan="4">이 기간에 방문이 없습니다</td></tr>'}</table></div></div>
-    <div class="card"><h2>${h('kw')}</h2><div class="scroll"><table><tr><th>검색어</th><th>검색</th><th>방문</th></tr>${W.kw.map(k=>`<tr><td class="wrap">${esc(k[0])}</td><td>${esc((SRC[k[1]]||k[1]).replace(' 검색',''))}</td><td>${f(k[2])}</td></tr>`).join('')||'<tr><td class="mute" colspan="3">검색어가 넘어온 방문이 없습니다</td></tr>'}</table></div>
-    <h2 style="margin-top:18px">링크를 걸어 준 곳</h2>${hbars(W.ref,'다른 사이트에서 넘어온 방문이 없습니다')}</div></div>
-    <div class="grid2"><div class="card"><h2>시간대별 조회 (최근 14일)</h2><div class="chart" id="c2"></div></div>
-    <div class="card"><h2>기기</h2>${hbars(Object.entries(W.dev).sort((a,b)=>b[1]-a[1]),'이 기간에 방문이 없습니다')}</div></div>
-    <div class="card full"><h2>많이 본 페이지 (최근 14일)</h2><div class="scroll"><table><tr><th>페이지</th><th>유형</th><th>${h('views')}</th></tr>${s.top.map(p=>`<tr><td class="wrap"><a href="https://${esc(s.host)}${esc(encodeURI(p[0]))}" target="_blank" rel="noopener noreferrer">${esc(p[0])}</a></td><td>${TYPE[p[2]]||''}</td><td>${f(p[1])}</td></tr>`).join('')||'<tr><td class="mute" colspan="3">자료 없음</td></tr>'}</table></div></div>`;
-    charts.push(()=>lineChart($('#c1'),series(d,range),VS),()=>barChart($('#c2'),s.hours,'조회'));
+    body=`<div class="kpis">${kpi('visitors','users','c-visit',f(sum(d,'visitors',w,y)),delta(sum(d,'visitors',w,y),sum(d,'visitors',day(14),day(8))),'방문자 7일')}
+    ${kpi('search','bot','c-search',f(sum(d,searchOf,w,y)),delta(sum(d,searchOf,w,y),sum(d,searchOf,day(14),day(8))),'검색 유입 7일')}
+    ${kpi('tel','phone','c-ink',f(sum(d,'tel',w)),`카톡 ${sum(d,'kakao',w).toLocaleString('ko-KR')}`,'전화 클릭 7일')}
+    ${kpi('total','file','c-ink',f(s.total),`전체 제작 ${made(s).toLocaleString('ko-KR')}`)}
+    ${kpi('cov_naver','bot','c-naver',pct(s.crawl.naver,s.total),`${s.crawl.naver.toLocaleString('ko-KR')} / ${s.total.toLocaleString('ko-KR')}`)}
+    ${kpi('cov_google','bot','c-google',pct(s.crawl.google,s.total),`${s.crawl.google.toLocaleString('ko-KR')} / ${s.total.toLocaleString('ko-KR')}`)}</div>
+    <div class="grid3"><div class="card"><div class="chead"><h2>방문자와 검색 유입</h2>${legend(VS)}</div><div class="chart" id="c1"></div>${dayTable(ds,[['방문자','visitors'],['방문','visits'],['조회','views'],['검색 유입',searchOf],['전화 클릭','tel']])}</div>
+    <div class="card"><div class="chead"><h2>${h('src')}</h2>${seg('win',[[7,'7일'],[14,'14일']],win)}</div>${donut(W.src)}</div></div>
+    <div class="grid2"><div class="card flush"><div class="chead"><h2>${h('land')}</h2><span class="mute small">최근 ${win}일</span></div>${tbl('<th>페이지</th><th>유형</th><th>방문</th><th>그중 검색</th>',W.land.map(p=>`<tr><td class="wrap">${plink(s,p[0])}</td><td>${TYPE[p[3]]||''}</td><td>${f(p[1])}</td><td>${f(p[2])}</td></tr>`),'이 기간에 방문이 없습니다')}</div>
+    <div class="card flush"><div class="chead"><h2>${h('kw')}</h2><span class="mute small">최근 ${win}일</span></div>${tbl('<th>검색어</th><th>검색</th><th>방문</th>',W.kw.map(k=>`<tr><td class="wrap">${esc(k[0])}</td><td>${esc((SRC[k[1]]||k[1]).replace(' 검색',''))}</td><td>${f(k[2])}</td></tr>`),'검색어가 넘어온 방문이 없습니다')}</div></div>
+    <div class="grid2"><div class="card"><div class="chead"><h2>들어온 ${h('ptype')}</h2><span class="mute small">최근 ${win}일</span></div>${hbars(types,'이 기간에 방문이 없습니다','var(--visit)')}<p class="mute small" style="margin:12px 0 0">공개된 주소: ${Object.entries(s.types).map(([k,v])=>`${TYPE[k]||k} ${v.toLocaleString('ko-KR')}`).join(' · ')}</p></div>
+    <div class="card"><div class="chead"><h2>시간대별 조회</h2><span class="mute small">최근 14일</span></div><div class="chart" id="c2"></div></div></div>
+    <div class="grid2"><div class="card"><div class="chead"><h2>기기</h2><span class="mute small">최근 ${win}일</span></div>${hbars(Object.entries(W.dev).sort((a,b)=>b[1]-a[1]),'이 기간에 방문이 없습니다')}</div>
+    <div class="card"><div class="chead"><h2>링크를 걸어 준 곳</h2><span class="mute small">최근 ${win}일</span></div>${hbars(W.ref,'다른 사이트에서 넘어온 방문이 없습니다')}</div></div>
+    <div class="card flush"><div class="chead"><h2>많이 본 페이지</h2><span class="mute small">최근 14일</span></div>${tbl(`<th>페이지</th><th>유형</th><th>${h('views')}</th>`,s.top.map(p=>`<tr><td class="wrap">${plink(s,p[0])}</td><td>${TYPE[p[2]]||''}</td><td>${f(p[1])}</td></tr>`),'자료 없음')}</div>`;
+    charts.push(()=>lineChart($('#c1'),ds,VS),()=>barChart($('#c2'),s.hours,'조회'));
   }else if(tab==='visits'){
     const srcs=[...new Set(s.visits.map(v=>v.src))];
-    body=`<p class="note small mute">최근 방문 ${s.visits.length}건입니다(최대 400건). ${h('visits','방문')} 한 건은 한 사람이 이어서 본 묶음이고, 줄을 누르면 본 순서가 펼쳐집니다. IP는 끝자리를 가렸습니다.</p>
+    body=`<div class="card flush"><div class="chead" style="padding-bottom:14px"><div><h2>최근 방문 ${s.visits.length.toLocaleString('ko-KR')}건</h2><div class="mute small">${h('visits','방문')} 한 건은 한 사람이 이어서 본 묶음입니다. 줄을 누르면 본 순서가 펼쳐집니다. IP는 끝자리를 가렸습니다.</div></div>
     <div class="filters"><select id="fsrc" aria-label="유입 경로"><option value="">유입 경로 전체</option>${srcs.map(k=>`<option value="${esc(k)}">${esc(SRC[k]||k)}</option>`).join('')}</select>
-    <select id="ftel" aria-label="전화 클릭"><option value="">전체</option><option value="1">전화·카톡 누른 방문만</option></select><input id="fq" type="search" placeholder="페이지·검색어 찾기" aria-label="찾기"></div>
-    <div class="card" style="padding:0"><div class="scroll"><table id="vt"></table></div></div>`;
+    <select id="ftel" aria-label="전화 클릭"><option value="">전체</option><option value="1">전화·카톡 누른 방문만</option></select><input id="fq" type="search" placeholder="페이지·검색어 찾기" aria-label="찾기"></div></div><div class="scroll"><table id="vt"></table></div></div>`;
   }else if(tab==='crawl'){
     const i=s.indexnow;
-    body=`<div class="tiles">${tile('bot_naver',f(sum(d,'bot_naver',y,y)),`<small>7일 ${f(sum(d,'bot_naver',w,y))}</small>`,'어제 네이버 수집')}${tile('bot_google',f(sum(d,'bot_google',y,y)),`<small>7일 ${f(sum(d,'bot_google',w,y))}</small>`,'어제 구글 수집')}
-    ${tile('cov_naver',pct(s.crawl.naver,s.total),`<small>${f(s.crawl.naver)} / ${f(s.total)}</small>`)}${tile('cov_google',pct(s.crawl.google,s.total),`<small>${f(s.crawl.google)} / ${f(s.total)}</small>`)}
-    ${tile('rsc',f(sum(d,'rsc_naver',w,y)),'<small>최근 7일</small>','수집 낭비 7일')}${tile('e404',f(sum(d,'404',w,y)),'<small>최근 7일</small>','없는 주소 요청 7일')}</div>
-    <div class="card full"><div class="chead"><h2>검색 로봇 수집</h2><span>${legend(BS)}</span>${seg('range',[[14,'14일'],[30,'30일'],[45,'45일']],range)}</div><div class="chart" id="c1"></div>${dayTable(series(d,range),[['네이버','bot_naver'],['구글','bot_google'],['빙','bot_bing'],['다음','bot_daum'],['AI 로봇','bot_ai'],['수집 낭비','rsc_naver'],['404','404']])}</div>
-    <div class="grid2"><div class="card"><h2>사이트맵 묶음별 수집률</h2><div class="scroll"><table><tr><th>묶음</th><th>주소</th><th>네이버</th><th>구글</th></tr>${s.parts.map(p=>`<tr><td>${esc(p[0])}</td><td>${f(p[1])}</td><td>${f(p[2])} (${pct(p[2],p[1])})</td><td>${f(p[3])} (${pct(p[3],p[1])})</td></tr>`).join('')}</table></div>
-    <p class="mute small">core는 메인과 허브, blog는 글, kw는 지역·키워드 페이지 1,000개씩입니다.</p></div>
-    <div class="card"><h2>${h('indexnow')}</h2><p>${i?`마지막 전송 ${esc(i.date)} · ${f(i.count)}개<br>네이버 응답 ${esc(i.naver??'-')} · 빙 쪽 응답 ${esc(i.indexnow??'-')} <span class="mute small">(200·202면 접수)</span>`:'전송 기록이 없습니다'}<br>보낼 차례를 기다리는 주소 ${f(s.pending)}개</p>
-    <h2 style="margin-top:18px">${h('health')}</h2><p>${bad.length?bad.map(([k,v])=>`<span class="warn">${esc(k)} ${v}건</span>`).join(' · '):'이상 없음'}</p>
-    <h2 style="margin-top:18px">${h('e404')} 상위 (최근 14일)</h2>${hbars(s.e404,'없는 주소 요청이 없습니다')}</div></div>`;
-    charts.push(()=>lineChart($('#c1'),series(d,range),BS));
+    body=`<div class="kpis">${kpi('bot_naver','bot','c-naver',f(sum(d,'bot_naver',y,y)),`7일 ${sum(d,'bot_naver',w,y).toLocaleString('ko-KR')}`,'어제 네이버 수집')}${kpi('bot_google','bot','c-google',f(sum(d,'bot_google',y,y)),`7일 ${sum(d,'bot_google',w,y).toLocaleString('ko-KR')}`,'어제 구글 수집')}
+    ${kpi('cov_naver','eye','c-naver',pct(s.crawl.naver,s.total),`${s.crawl.naver.toLocaleString('ko-KR')} / ${s.total.toLocaleString('ko-KR')}`)}${kpi('cov_google','eye','c-google',pct(s.crawl.google,s.total),`${s.crawl.google.toLocaleString('ko-KR')} / ${s.total.toLocaleString('ko-KR')}`)}
+    ${kpi('rsc','ban','c-search',f(sum(d,'rsc_naver',w,y)),'최근 7일','수집 낭비 7일')}${kpi('e404','alert','c-bad',f(sum(d,'404',w,y)),'최근 7일','없는 주소 요청 7일')}</div>
+    <div class="card full"><div class="chead"><h2>검색 로봇 수집</h2>${legend(BS)}</div><div class="chart" id="c1"></div>${dayTable(ds,[['네이버','bot_naver'],['구글','bot_google'],['빙','bot_bing'],['다음','bot_daum'],['AI 로봇','bot_ai'],['수집 낭비','rsc_naver'],['404','404']])}</div>
+    <div class="grid2"><div class="card flush"><div class="chead"><h2>사이트맵 묶음별 수집률</h2></div>${tbl('<th>묶음</th><th>주소</th><th>네이버</th><th>구글</th>',s.parts.map(p=>`<tr><td>${esc(p[0])}</td><td>${f(p[1])}</td><td>${f(p[2])} <span class="mute small">${pct(p[2],p[1])}</span></td><td>${f(p[3])} <span class="mute small">${pct(p[3],p[1])}</span></td></tr>`),'묶음 없음',12)}</div>
+    <div class="card"><div class="chead"><h2>${h('indexnow')}</h2></div><p style="margin:0">${i?`마지막 전송 ${esc(i.date)} · ${f(i.count)}개<br>네이버 응답 ${esc(i.naver??'-')} · 빙 쪽 응답 ${esc(i.indexnow??'-')} <span class="mute small">(200·202면 접수)</span>`:'전송 기록이 없습니다'}<br>보낼 차례를 기다리는 주소 ${f(s.pending)}개</p>
+    <div class="chead" style="margin-top:18px"><h2>${h('health')}</h2></div><p style="margin:0">${bad.length?bad.map(([k,v])=>`<span class="warn">${esc(k)} ${v}건</span>`).join(' · '):'<span class="ok">이상 없음</span>'}</p>
+    <div class="chead" style="margin-top:18px"><h2>${h('e404')} 상위</h2><span class="mute small">최근 14일</span></div>${hbars(s.e404,'없는 주소 요청이 없습니다','var(--bad)')}</div></div>`;
+    charts.push(()=>lineChart($('#c1'),ds,BS));
   }else{
-    const dd=series(d,range).reverse();
-    body=`<div class="tiles">${tile('made',f(made(s)))}${tile('total',f(s.total),`<small>페이지 ${f(s.pages)} · 글 ${f(s.posts)}</small>`)}${tile('left',f(s.left_pages+s.left_posts),`<small>페이지 ${f(s.left_pages)} · 글 ${f(s.left_posts)}</small>`)}
-    ${tile('new_pages',f(sum(d,'new_pages',t,t)),`<small>7일 ${f(sum(d,'new_pages',w))}</small>`)}${tile('new_posts',f(sum(d,'new_posts',t,t)),`<small>7일 ${f(sum(d,'new_posts',w))}</small>`)}</div>
-    <div class="grid2"><div class="card"><div class="chead"><h2>날짜별 공개 기록</h2>${seg('range',[[14,'14일'],[30,'30일'],[45,'45일']],range)}</div><div class="scroll"><table><tr><th>날짜</th><th>열린 페이지</th><th>발행 글</th><th>공개 페이지 누계</th><th>공개 글 누계</th></tr>${dd.map(x=>`<tr><td>${x.d}</td><td>${f(x.new_pages)}</td><td>${f(x.new_posts)}</td><td>${x.pages!=null?f(x.pages):'<span class="zero">-</span>'}</td><td>${x.posts!=null?f(x.posts):'<span class="zero">-</span>'}</td></tr>`).join('')}</table></div>
-    <p class="mute small">누계는 대시보드를 설치한 날부터 기록됩니다.</p></div>
-    <div class="card"><h2>남은 일정</h2><div class="scroll"><table><tr><th>날짜</th><th>열릴 페이지</th><th>발행될 글</th></tr>${(s.schedule||[]).map(x=>`<tr><td>${esc(x.date)}</td><td>${f(x.pages)}</td><td>${f(x.posts)}</td></tr>`).join('')||'<tr><td class="mute" colspan="3">예약된 일정이 없습니다</td></tr>'}</table></div></div></div>`;
+    const dd=ds.slice().reverse();
+    body=`<div class="kpis">${kpi('made','file','c-ink',f(made(s)))}${kpi('total','eye','c-naver',f(s.total),`페이지 ${s.pages.toLocaleString('ko-KR')} · 글 ${s.posts.toLocaleString('ko-KR')}`)}${kpi('left','cal','c-search',f(s.left_pages+s.left_posts),`페이지 ${s.left_pages.toLocaleString('ko-KR')} · 글 ${s.left_posts.toLocaleString('ko-KR')}`)}
+    ${kpi('new_pages','plus','c-visit',f(sum(d,'new_pages',t,t)),`7일 ${sum(d,'new_pages',w).toLocaleString('ko-KR')}`)}${kpi('new_posts','plus','c-google',f(sum(d,'new_posts',t,t)),`7일 ${sum(d,'new_posts',w).toLocaleString('ko-KR')}`)}</div>
+    <div class="grid2"><div class="card flush"><div class="chead"><h2>날짜별 공개 기록</h2></div>${tbl('<th>날짜</th><th>열린 페이지</th><th>발행 글</th><th>공개 페이지 누계</th><th>공개 글 누계</th>',dd.map(x=>`<tr><td>${x.d}</td><td>${f(x.new_pages)}</td><td>${f(x.new_posts)}</td><td>${x.pages!=null?f(x.pages):'<span class="zero">-</span>'}</td><td>${x.posts!=null?f(x.posts):'<span class="zero">-</span>'}</td></tr>`),'기록 없음',10)}</div>
+    <div class="card flush"><div class="chead"><h2>남은 일정</h2></div>${tbl('<th>날짜</th><th>열릴 페이지</th><th>발행될 글</th>',(s.schedule||[]).map(x=>`<tr><td>${esc(x.date)}</td><td>${f(x.pages)}</td><td>${f(x.posts)}</td></tr>`),'예약된 일정이 없습니다',10)}</div></div>
+    <p class="mute small">누계는 대시보드가 이 사이트를 보기 시작한 날부터 기록됩니다.</p>`;
   }
-  main.innerHTML=`<div class="head"><div><h1>${esc(s.name)}${s.preview?'<span class="tag">미리보기</span>':''}</h1><div class="mute small"><a href="https://${esc(s.host)}/" target="_blank" rel="noopener noreferrer">${esc(s.host)}</a>
-  · ${h('created')} ${s.created?esc(s.created)+` (${age.toLocaleString('ko-KR')}일째)`:'확인 안 됨'} · 갱신 ${esc(s.updated)}</div></div></div>
-  <nav class="tabs">${tabs.map(x=>`<a href="#/s/${esc(id)}${x[0]?'/'+x[0]:''}" class="${(tab||'')===x[0]?'on':''}">${x[1]}</a>`).join('')}</nav>${tab==='visits'?'':estNote()}${body}`;
+  main.innerHTML=`<div class="sitehead"><span>${ic('globe')}</span><a href="https://${esc(s.host)}/" target="_blank" rel="noopener noreferrer">${esc(s.name)}</a><span>${h('created')} ${s.created?esc(s.created)+` · ${age.toLocaleString('ko-KR')}일째`:'확인 안 됨'}</span><span>공개 주소 ${s.total.toLocaleString('ko-KR')}</span></div>
+  <nav class="tabs">${TABS.map(x=>`<a href="#/s/${esc(id)}${x[0]?'/'+x[0]:''}" class="${tab===x[0]?'on':''}">${x[1]}</a>`).join('')}</nav>${tab==='visits'?'':estNote(ds)}${body}`;
   if(tab==='visits'){const paint=()=>{const fs=$('#fsrc').value,ft=$('#ftel').value,q=$('#fq').value.trim();
       const rows=s.visits.filter(v=>(!fs||v.src===fs)&&(!ft||v.tel||v.kakao)&&(!q||(v.land+' '+v.kw+' '+v.pages.join(' ')+' '+v.ref).includes(q)));
-      $('#vt').innerHTML=`<tr><th>시각</th><th class="l">어디서</th><th class="l">처음 본 페이지</th><th>본 쪽수</th><th class="l">기기</th><th class="l">전화·카톡</th><th class="l">IP</th></tr>`+(rows.map((v,i)=>`<tr class="row" data-v="${i}"><td>${esc(v.t)}</td><td class="l">${esc(SRC[v.src]||v.src)}${v.kw?` <span class="mute">“${esc(v.kw)}”</span>`:v.ref&&!['naver','google','daum','bing'].includes(v.src)?` <span class="mute">${esc(v.ref)}</span>`:''}</td><td class="l wrap">${esc(v.land)}</td><td>${v.n}</td><td class="l">${esc(v.dev)}</td><td class="l">${v.tel?'전화':''}${v.tel&&v.kakao?' · ':''}${v.kakao?'카톡':''}</td><td class="l mute">${esc(v.ip)}</td></tr>`).join('')||'<tr><td class="mute l" colspan="7">조건에 맞는 방문이 없습니다</td></tr>');
+      $('#vt').innerHTML=`<tr><th class="l">시각</th><th class="l">어디서</th><th class="l">처음 본 페이지</th><th>본 쪽수</th><th class="l">기기</th><th class="l">전화·카톡</th><th class="l">IP</th></tr>`+(rows.map((v,i)=>`<tr class="row" data-v="${i}"><td class="l">${esc(v.t)}</td><td class="l">${esc(SRC[v.src]||v.src)}${v.kw?` <span class="mute">“${esc(v.kw)}”</span>`:v.ref&&!['naver','google','daum','bing'].includes(v.src)?` <span class="mute">${esc(v.ref)}</span>`:''}</td><td class="l wrap">${esc(v.land)}</td><td>${v.n}</td><td class="l">${esc(v.dev)}</td><td class="l">${v.tel?'<span class="ok">전화</span>':''}${v.tel&&v.kakao?' · ':''}${v.kakao?'<span class="ok">카톡</span>':''}</td><td class="l mute">${esc(v.ip)}</td></tr>`).join('')||'<tr><td class="mute l" colspan="7">조건에 맞는 방문이 없습니다</td></tr>');
       $('#vt').onclick=e=>{const tr=e.target.closest('tr.row');if(!tr)return;const nx=tr.nextElementSibling;if(nx&&nx.classList.contains('tr2')){nx.remove();return}
         const v=rows[tr.dataset.v],r=document.createElement('tr');r.className='tr2';r.innerHTML=`<td colspan="7" class="trail"><span>본 순서</span> ${v.pages.map(p=>esc(p)).join(' <span>→</span> ')}${v.n>v.pages.length?` <span>외 ${v.n-v.pages.length}쪽</span>`:''}</td>`;tr.after(r)}};
     ['fsrc','ftel','fq'].forEach(i=>$('#'+i).oninput=paint);paint()}
   draw()}
 
 function help(){const groups=[['방문',['visitors','visits','views','search','src','land','kw','ptype','tel']],['공개·발행',['total','made','left','new_pages','new_posts']],['수집·색인',['bot_naver','bot_google','cov_naver','cov_google','rsc','e404','indexnow','health']],['기타',['est','created']]];
-  main.innerHTML=`<div class="head"><h1>용어 설명</h1></div>`+groups.map(g=>`<div class="card full"><h2>${g[0]}</h2><dl class="gloss">${g[1].map(k=>`<dt>${esc(HELP[k][0])}</dt><dd>${esc(HELP[k][1])}</dd>`).join('')}</dl></div>`).join('')
-  +`<div class="card full"><h2>자료가 어디서 오는지</h2><p>모든 숫자는 서버의 접속 기록과 각 사이트의 사이트맵에서 계산합니다. 하루 두 번(7시 30분, 15시 30분) 갱신합니다. 검색 순위, 검색량, 백링크는 서버 기록으로 알 수 없어 넣지 않았습니다. 구글 순위와 클릭 수는 서치콘솔을 연결하면 추가할 수 있습니다.</p></div>`}
-function account(){main.innerHTML=`<div class="head"><h1>비밀번호 변경</h1></div><div class="card"><form class="form" id="pf"><label>지금 비밀번호<input type="password" name="old" required autocomplete="current-password"></label><label>새 비밀번호 (8자 이상)<input type="password" name="new" required minlength="8" autocomplete="new-password"></label><button class="btn">바꾸기</button><p id="pm" class="small" role="status"></p></form></div>`;
+  topbar('용어 설명','화면에 나오는 숫자의 뜻과 계산 방법','');
+  main.innerHTML=groups.map(g=>`<div class="card full"><div class="chead"><h2>${g[0]}</h2></div><dl class="gloss">${g[1].map(k=>`<dt>${esc(HELP[k][0])}</dt><dd>${esc(HELP[k][1])}</dd>`).join('')}</dl></div>`).join('')
+  +`<div class="card full"><div class="chead"><h2>자료가 어디서 오는지</h2></div><p style="margin:0">모든 숫자는 서버의 접속 기록과 각 사이트의 사이트맵에서 계산합니다. 하루 두 번(7시 30분, 15시 30분) 갱신합니다. 검색 순위, 검색량, 백링크는 서버 기록으로 알 수 없어 넣지 않았습니다. 구글 순위와 클릭 수는 서치콘솔을 연결하면 추가할 수 있습니다.</p></div>`}
+function account(){topbar('비밀번호 변경','바꾸면 다른 기기의 로그인은 모두 풀립니다','');
+  main.innerHTML=`<div class="card"><form class="form" id="pf"><label>지금 비밀번호<input type="password" name="old" required autocomplete="current-password"></label><label>새 비밀번호 (8자 이상)<input type="password" name="new" required minlength="8" autocomplete="new-password"></label><button class="btn">바꾸기</button><p id="pm" class="small" role="status"></p></form></div>`;
   $('#pf').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target),r=await fetch('/api/password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({old:fd.get('old'),new:fd.get('new')})}),j=await r.json().catch(()=>({}));
-    $('#pm').textContent=r.ok?'바꿨습니다. 다른 기기의 로그인은 모두 풀립니다.':(j.error||'바꾸지 못했습니다');if(r.ok)e.target.reset()}}
+    $('#pm').textContent=r.ok?'바꿨습니다.':(j.error||'바꾸지 못했습니다');if(r.ok)e.target.reset()}}
 
 async function api(p){const r=await fetch('/api/'+p,{cache:'no-store'});if(r.status===401){location.href='/login';return null}if(!r.ok){main.innerHTML=`<p class="warn">자료를 불러오지 못했습니다 (${r.status}). 수집이 아직 한 번도 돌지 않았을 수 있습니다.</p>`;return null}return r.json()}
-function nav(){const cur=location.hash||'#/',live=D.sites.filter(s=>!s.preview),pre=D.sites.filter(s=>s.preview),y=day(1);
-  const item=s=>`<a href="#/s/${esc(s.id)}" class="${cur.startsWith('#/s/'+s.id)?'on':''}${s.preview?' pre':''}"><span>${esc(s.name.replace('.172.237.20.244.sslip.io',''))}</span><span class="n" title="어제 방문자">${sum(s.days,'visitors',y,y).toLocaleString('ko-KR')}</span></a>`;
-  $('#side').innerHTML=`<div class="brand">사이트 운영 현황</div><div class="grp">전체</div><a href="#/" class="${cur==='#/'?'on':''}">전체 현황</a><div class="grp">운영 사이트 · 어제 방문자</div>${live.map(item).join('')}${pre.length?`<div class="grp">미리보기</div>${pre.map(item).join('')}`:''}
-  <div class="grp">도움</div><a href="#/help" class="${cur==='#/help'?'on':''}">용어 설명</a><a href="#/account" class="${cur==='#/account'?'on':''}">비밀번호 변경</a><form method="post" action="/logout"><button>로그아웃</button></form>`;
-  $('#msel').innerHTML=`<option value="#/">전체 현황</option>${D.sites.map(s=>`<option value="#/s/${esc(s.id)}" ${cur.startsWith('#/s/'+s.id)?'selected':''}>${esc(s.name)}</option>`).join('')}<option value="#/help" ${cur==='#/help'?'selected':''}>용어 설명</option><option value="#/account" ${cur==='#/account'?'selected':''}>비밀번호 변경</option>`}
-async function route(){if(!D){D=await api('data');if(!D)return}const p=(location.hash||'#/').slice(2).split('/');nav();tip.style.display='none';
-  if(p[0]==='s'&&D.sites.some(s=>s.id===p[1]))await site(p[1],p[2]||'');else if(p[0]==='help')help();else if(p[0]==='account')account();else overview();scrollTo(0,0)}
-addEventListener('hashchange',route);$('#msel').onchange=e=>location.hash=e.target.value;
+/* 위쪽 막대: 사이트 고르기(누르면 찾기 창) + 제목 + 기간 */
+function topbar(title,sub,right){const cur=(location.hash||'#/').slice(2).split('/'),sid=cur[0]==='s'?cur[1]:'',now=D.sites.find(s=>s.id===sid),y=day(1);
+  const item=s=>`<a href="#/s/${esc(s.id)}${cur[0]==='s'&&cur[2]?'/'+esc(cur[2]):''}" class="${s.id===sid?'on':''}" data-n="${esc((s.name+' '+s.host).toLowerCase())}"><span>${esc(s.name)}</span><span title="어제 방문자">${sum(s.days,'visitors',y,y).toLocaleString('ko-KR')}</span></a>`;
+  const live=D.sites.filter(s=>!s.preview).sort((a,b)=>sum(b.days,'visitors',y,y)-sum(a.days,'visitors',y,y)),pre=D.sites.filter(s=>s.preview);
+  $('#top').innerHTML=`<div class="sw"><button type="button" class="swbtn" id="swb" aria-haspopup="true" aria-expanded="false">${ic('globe')}<b>${now?esc(now.name):'전체 사이트'}</b>${ic('down')}</button>
+  <div class="pop" id="pop"><input id="pq" type="search" placeholder="사이트 이름으로 찾기" aria-label="사이트 찾기"><div class="list"><a href="#/" class="${sid?'':'on'}" data-n="전체 현황 all"><span>전체 현황</span><span>${D.sites.length}곳</span></a>
+  <div class="g">운영 사이트 · 어제 방문자</div>${live.map(item).join('')}${pre.length?`<div class="g">미리보기</div>${pre.map(item).join('')}`:''}</div></div></div>
+  <div class="grow"><h1>${esc(title)}</h1><div class="mute small">${sub}</div></div>${right||''}`;
+  const pop=$('#pop'),btn=$('#swb'),open=o=>{pop.classList.toggle('open',o);btn.setAttribute('aria-expanded',o);if(o){$('#pq').value='';filt();$('#pq').focus()}};
+  const filt=()=>{const q=$('#pq').value.trim().toLowerCase();pop.querySelectorAll('a').forEach(a=>a.style.display=!q||a.dataset.n.includes(q)?'':'none');pop.querySelectorAll('.g').forEach(g=>g.style.display=q?'none':'')};
+  btn.onclick=e=>{e.stopPropagation();open(!pop.classList.contains('open'))};pop.onclick=e=>{e.stopPropagation();if(e.target.closest('a'))open(false)};
+  $('#pq').oninput=filt;$('#pq').onkeydown=e=>{if(e.key==='Enter'){const a=[...pop.querySelectorAll('a')].find(a=>a.style.display!=='none');if(a){location.hash=a.getAttribute('href');open(false)}}if(e.key==='Escape')open(false)}}
+function nav(){const cur=(location.hash||'#/').slice(2).split('/'),sid=cur[0]==='s'?cur[1]:'',tab=cur[2]||'';
+  const a=(href,icon,label,on)=>`<a href="${href}" class="${on?'on':''}">${ic(icon)}<span>${label}</span></a>`;
+  $('#side').innerHTML=`<div class="brand"><i>${ic('pulse')}</i>운영 현황</div>${a('#/','grid','전체 현황',!cur[0])}
+  ${sid?`<div class="grp">이 사이트</div>${TABS.map(x=>a(`#/s/${esc(sid)}${x[0]?'/'+x[0]:''}`,x[2],x[1],tab===x[0])).join('')}`:`<div class="grp">사이트</div><button type="button" class="nav" id="pick">${ic('globe')}<span>사이트 고르기</span></button>`}
+  <div class="sp"></div>${a('#/help','book','용어 설명',cur[0]==='help')}${a('#/account','key','비밀번호 변경',cur[0]==='account')}<form method="post" action="/logout"><button class="nav">${ic('out')}<span>로그아웃</span></button></form>`;
+  const p=$('#pick');if(p)p.onclick=e=>{e.stopPropagation();$('#swb').click()}}
+async function route(){if(!D){D=await api('data');if(!D)return}const p=(location.hash||'#/').slice(2).split('/');tip.style.display='none';
+  if(p[0]==='s'&&D.sites.some(s=>s.id===p[1]))await site(p[1],TABS.some(x=>x[0]===p[2])?p[2]:'');else if(p[0]==='help')help();else if(p[0]==='account')account();else overview();nav()}
+addEventListener('hashchange',()=>route().then(()=>scrollTo(0,0)));
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(draw,150)});
-document.addEventListener('click',e=>{const b=e.target.closest('[data-seg] button');if(b){const n=b.parentNode.dataset.seg;if(n==='range')range=+b.dataset.v;else win=+b.dataset.v;const y=scrollY;route().then(()=>scrollTo(0,y));return}
+document.addEventListener('click',e=>{const pop=$('#pop');if(pop&&pop.classList.contains('open'))pop.classList.remove('open');
+  const b=e.target.closest('[data-seg] button');if(b){const n=b.parentNode.dataset.seg;if(n==='range')range=+b.dataset.v;else win=+b.dataset.v;const y=scrollY;route().then(()=>scrollTo(0,y));return}
+  const m=e.target.closest('.morebtn');if(m){const o=m.parentNode.classList.toggle('open');m.textContent=o?'접기':`전체 ${m.dataset.more}줄 보기`;return}
   const tr=e.target.closest('tr[data-go]');if(tr)location.hash=tr.dataset.go});
 document.addEventListener('mouseover',e=>{const t=e.target.closest('[data-h]');if(t&&HELP[t.dataset.h])showTip(e,`<b>${esc(HELP[t.dataset.h][0])}</b><div>${esc(HELP[t.dataset.h][1])}</div>`)});
 document.addEventListener('mouseout',e=>{if(e.target.closest('[data-h]'))tip.style.display='none'});
