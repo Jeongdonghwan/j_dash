@@ -140,7 +140,7 @@ def parse_logs(sites):
                 k = pre + n
                 seg[k] = None if k in seg and seg[k] != s['root'] else s['root']
     A = defaultdict(lambda: {'days': defaultdict(Counter), 'crawled': defaultdict(set), 'uv': defaultdict(set), 'open': {}, 'sess': [],
-                             'top': Counter(), 'e404': Counter(), 'hours': Counter()})
+                             'top': Counter(), 'e404': Counter(), 'hours': Counter(), 'real': set()})
     mt = lambda fs: sorted(fs, key=os.path.getmtime)   # 오래된 파일부터 — 방문 묶음은 시간 순서로 봐야 한다
     vfiles, afiles = mt(glob.glob(LOGS + '/vhost.log*')), mt(glob.glob(LOGS + '/access.log*'))
     vdates, ordc = set(), {}
@@ -177,13 +177,15 @@ def parse_logs(sites):
                     if path.startswith('/_t'):   # 전화·카톡 클릭 신호 (정적 서버라 404 로 남는다 — 기록만 쓰면 된다)
                         ev = (urllib.parse.parse_qs(req.partition('?')[2]).get('e') or [''])[0]
                         if human and ev in ('tel', 'kakao', 'sms'):
-                            c[ev] += 1
+                            c[ev] += 1; a['real'].add(key)
                             s = a['open'].get(key)
                             if s and tmin - s['_t'] <= 30: s[ev] = 1
                         continue
                     if '_rsc=' in req:
                         if bot: c['rsc_' + bot] += 1
+                        elif human: a['real'].add(key)
                         continue
+                    if human and method == 'GET' and status in ('200', '304') and not is_page(path): a['real'].add(key)   # 그림·스크립트까지 받아 간 접속 = 실제 브라우저
                     if method != 'GET' or not is_page(path): continue
                     if status == '404':
                         c['404'] += 1; a['e404'][path[:120]] += 1
@@ -192,17 +194,24 @@ def parse_logs(sites):
                         c['bot_' + bot] += 1; a['crawled'][bot].add(path)
                     elif not human: c['bot_other'] += 1
                     else:
-                        c['views'] += 1; a['uv'][d].add(key); a['top'][path] += 1; a['hours'][int(hh)] += 1
                         s = a['open'].get(key)
                         if not s or tmin - s['_t'] > 30:
                             src, rh, kw = source(ref, own[root])
-                            s = {'t': f'{d} {hh}:{mi}', 'd': d, 'ip': mask(ip), 'src': src, 'ref': rh, 'kw': kw, 'land': path, 'pages': [], 'n': 0, 'dev': device(ua)}
+                            s = {'t': f'{d} {hh}:{mi}', 'd': d, 'ip': mask(ip), 'src': src, 'ref': rh, 'kw': kw, 'land': path, 'pages': [], 'n': 0, 'dev': device(ua), '_k': key, '_pv': []}
                             a['open'][key] = s; a['sess'].append(s)
-                            c['visits'] += 1; c['src_' + src] += 1
-                        s['_t'] = tmin; s['n'] += 1
+                        s['_t'] = tmin; s['n'] += 1; s['_pv'].append((int(hh), path))
                         if len(s['pages']) < 12: s['pages'].append(path)
     feed(afiles, False); feed(vfiles, True)
+    # 사람 판정은 기록을 다 읽은 뒤에: 페이지만 가져가고 그림·스크립트는 한 번도 안 받은 접속은 브라우저 흉내 낸 프로그램으로 본다
     for a in A.values():
+        keep = []
+        for s in a['sess']:
+            c = a['days'][s['d']]
+            if s['_k'] not in a['real']:
+                c['bot_other'] += s['n']; continue
+            keep.append(s); c['visits'] += 1; c['src_' + s['src']] += 1; c['views'] += s['n']; a['uv'][s['d']].add(s['_k'])
+            for hh, path in s['_pv']: a['top'][path] += 1; a['hours'][hh] += 1
+        a['sess'] = keep
         for d, u in a['uv'].items(): a['days'][d]['visitors'] = len(u)
     return A, min(vdates) if vdates else None
 
@@ -342,7 +351,7 @@ def main():
                       w7=window(sess, sm, 7), w14=window(sess, sm, 14),
                       top=[[p, n, ptype(p, sm.get(p, ('', '', ''))[2])] for p, n in a['top'].most_common(25)],
                       e404=a['e404'].most_common(15), hours=[a['hours'].get(h, 0) for h in range(24)],
-                      visits=[{k: v for k, v in x.items() if k not in ('_t', 'd')} for x in sess[:400]])
+                      visits=[{k: v for k, v in x.items() if k != 'd' and not k.startswith('_')} for x in sess[:400]])
         json.dump(detail, open(os.path.join(OUT, f'site-{s["id"]}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
     rf = os.path.join(STATE, 'remotes.txt')   # 다른 서버 수집기의 결과 주소(한 줄에 하나) — 그쪽 사이트를 이 화면에 합친다
     for base in ([l.strip().rstrip('/') for l in open(rf, encoding='utf-8') if l.strip() and not l.startswith('#')] if os.path.exists(rf) else []):
@@ -561,6 +570,7 @@ h1{font-size:22px;margin:0;letter-spacing:-.02em;line-height:1.3}h2{font-size:15
 th,td{padding:10px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th{font-size:12px;font-weight:600;color:var(--mute);background:var(--soft)}
 tr:last-child td{border-bottom:0}th:first-child,td:first-child,th.l,td.l{text-align:left}td.wrap{white-space:normal;word-break:break-all;max-width:420px}
 th[data-sort]{cursor:pointer;user-select:none}th[data-sort]:hover{color:var(--ink)}th .ar{display:inline-block;width:10px;color:var(--accent)}
+.pb{display:inline-block;width:54px;height:6px;border-radius:3px;background:#eceff3;vertical-align:middle;margin-right:8px;overflow:hidden}.pb i{display:block;height:100%;border-radius:3px}
 tr.row{cursor:pointer}tr.row:hover td{background:#fafbfc}tr.pre td:first-child{color:var(--mute)}tr.more{display:none}.open tr.more{display:table-row}
 .morebtn{display:block;width:100%;background:var(--soft);border:0;border-top:1px solid var(--line);padding:10px;cursor:pointer;color:var(--mute);font-size:13px}.morebtn:hover{color:var(--ink)}
 .card:not(.flush) .morebtn{border:1px solid var(--line);border-radius:10px;margin-top:10px}
@@ -587,7 +597,7 @@ details summary{cursor:pointer;color:var(--mute);font-size:12px;margin-top:12px}
 <div id="tip" role="tooltip"></div>
 <script>
 const HELP={
-visitors:['방문자','그날 사이트에 들어온 사람 수입니다. 같은 IP와 같은 브라우저는 하루에 한 명으로 셉니다. 검색 로봇과 자동 프로그램은 빼고 셉니다.'],
+visitors:['방문자','그날 사이트에 들어온 사람 수입니다. 같은 IP와 같은 브라우저는 하루에 한 명으로 셉니다. 페이지의 그림이나 스크립트까지 불러온 접속만 사람으로 세고, 페이지 글자만 가져간 접속은 자동 프로그램으로 보고 뺍니다.'],
 visits:['방문','한 사람이 들어와서 30분 넘게 쉬지 않고 이어 본 한 묶음입니다. 같은 사람이 오전과 오후에 따로 들어오면 2번으로 셉니다.'],
 views:['조회','사람이 페이지를 연 횟수입니다. 한 번 방문에 3쪽을 보면 3입니다.'],
 search:['검색 유입','네이버·구글·다음·빙 검색 결과를 눌러 들어온 방문 수입니다. 네이버 앱은 경로를 안 남기는 경우가 있어 실제보다 적게 잡힙니다.'],
@@ -682,11 +692,14 @@ const made=s=>s.total+s.left_pages+s.left_posts,RNG=[[14,'14일'],[30,'30일'],[
 const plink=(s,p)=>`<a href="https://${esc(s.host)}${esc(encodeURI(p))}" target="_blank" rel="noopener noreferrer">${esc(p)}</a>`;
 
 const COLS=[['사이트',s=>s.name,null],['visitors',(s,c)=>sum(s.days,'visitors',c.y,c.y),'방문자 어제'],['search',(s,c)=>sum(s.days,searchOf,c.w,c.y),'검색 유입 7일'],['tel',(s,c)=>sum(s.days,'tel',c.w),'전화 7일'],['total',s=>s.total],['made',s=>made(s)],['new_pages',(s,c)=>sum(s.days,'new_pages',c.t,c.t)],['new_posts',(s,c)=>sum(s.days,'new_posts',c.t,c.t)],['bot_naver',(s,c)=>sum(s.days,'bot_naver',c.w,c.y),'네이버 수집 7일'],['bot_google',(s,c)=>sum(s.days,'bot_google',c.w,c.y),'구글 수집 7일'],['cov_naver',s=>s.total?s.crawl.naver/s.total:0],['cov_google',s=>s.total?s.crawl.google/s.total:0],['health',s=>Object.keys(s.health||{}).length]];
+function spark(days){const v=series(days,14).map(x=>x.visitors||0),m=Math.max(1,...v),W=84,H=24;if(!v.some(Boolean))return '<span class="zero">-</span>';
+  const pts=v.map((y,i)=>(i*W/13).toFixed(1)+','+(H-2-(H-4)*y/m).toFixed(1)).join(' ');
+  return `<svg width="${W}" height="${H}" role="img" aria-label="방문자 14일 추이"><title>최근 14일 방문자 (최대 ${m})</title><polygon points="0,${H} ${pts} ${W},${H}" fill="var(--visit)" opacity=".12"/><polyline points="${pts}" fill="none" stroke="var(--visit)" stroke-width="1.6" stroke-linejoin="round"/></svg>`}
 function siteRows(){const c={y:day(1),w:day(7),t:D.today},q=query.trim().toLowerCase();
   const rows=D.sites.filter(s=>!q||s.name.toLowerCase().includes(q)||s.host.includes(q)).map(s=>({s,v:COLS.map(col=>col[1](s,c))}));
   rows.sort((a,b)=>(a.s.preview-b.s.preview)||((typeof a.v[sortK]==='string'?a.v[sortK].localeCompare(b.v[sortK],'ko'):a.v[sortK]-b.v[sortK])*sortDir));
-  $('#st').innerHTML=`<tr>${COLS.map((col,i)=>`<th data-sort="${i}">${i?h(col[0],col[2]):'사이트'}<span class="ar">${i===sortK?(sortDir<0?'▾':'▴'):''}</span></th>`).join('')}</tr>`+
-  (rows.map(({s,v})=>`<tr class="row${s.preview?' pre':''}" data-go="#/s/${esc(s.id)}"><td>${esc(s.name)}${s.preview?'<span class="tag">미리보기</span>':''}</td>${v.slice(1,10).map(x=>`<td>${f(x)}</td>`).join('')}<td>${pct(s.crawl.naver,s.total)}</td><td>${pct(s.crawl.google,s.total)}</td><td>${v[12]?`<span class="warn">확인 필요 ${v[12]}</span>`:'<span class="ok">정상</span>'}</td></tr>`).join('')||`<tr><td class="mute l" colspan="13">찾는 사이트가 없습니다</td></tr>`)}
+  $('#st').innerHTML=`<tr>${COLS.map((col,i)=>`<th data-sort="${i}">${i?h(col[0],col[2]):'사이트'}<span class="ar">${i===sortK?(sortDir<0?'▾':'▴'):''}</span></th>${i?'':'<th>방문자 14일</th>'}`).join('')}</tr>`+
+  (rows.map(({s,v})=>`<tr class="row${s.preview?' pre':''}" data-go="#/s/${esc(s.id)}"><td>${esc(s.name)}${s.preview?'<span class="tag">미리보기</span>':''}</td><td>${spark(s.days)}</td>${v.slice(1,10).map(x=>`<td>${f(x)}</td>`).join('')}<td><span class="pb"><i style="width:${v[10]*100}%;background:var(--naver)"></i></span>${pct(s.crawl.naver,s.total)}</td><td><span class="pb"><i style="width:${v[11]*100}%;background:var(--google)"></i></span>${pct(s.crawl.google,s.total)}</td><td>${v[12]?`<span class="warn">확인 필요 ${v[12]}</span>`:'<span class="ok">정상</span>'}</td></tr>`).join('')||`<tr><td class="mute l" colspan="14">찾는 사이트가 없습니다</td></tr>`)}
 
 function overview(){
   const live=D.sites.filter(s=>!s.preview),all=merge(live),y=day(1),w=day(7),t=D.today,ds=series(all,range);
