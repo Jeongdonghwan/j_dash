@@ -2,6 +2,11 @@
 # SEO 대시보드 — 다른 서버용 수집기 설치. 결과는 https://seo.jd8.co.kr 로 올린다. 다시 돌려도 된다.
 set -euo pipefail
 : "${DASH_PUSH_TOKEN:?DASH_PUSH_TOKEN=<토큰> 을 앞에 붙여 실행}"
+# 대시보드 서버(화면 서버가 깔린 곳)에서 돌리면 수집기·cron 을 덮어써 화면이 망가진다 (2026-11-19 172 에서 실제로 일어남)
+[ -f /opt/seo-dash/dash_app.py ] && { echo "!! 이 서버는 대시보드 서버입니다 — 이 파일은 다른 서버용. 여기서는 install-seo-dash.sh 를 쓰세요. 중단"; exit 1; }
+# 다시 설치할 때 DASH_ONLY 를 주면 지난번 값을 대신한다 — 빠지는 호스트가 있으면 알려 준다
+OLD=$(cat /var/lib/seo-dash/only 2>/dev/null || true)
+if [ -n "${DASH_ONLY:-}" ] && [ -n "$OLD" ]; then for h in $OLD; do case " $DASH_ONLY " in *" $h "*) ;; *) echo "!! 지난번 대상 $h 가 이번 DASH_ONLY 에 없음 — 그대로 두려면 DASH_ONLY 에 함께 넣으세요. 중단"; exit 1;; esac; done; fi
 mkdir -p /opt/seo-dash /var/lib/seo-dash/out /root/seo-dash-node-bak
 chmod 700 /var/lib/seo-dash
 printf '%s' "$DASH_PUSH_TOKEN" > /var/lib/seo-dash/push_token_node; chmod 600 /var/lib/seo-dash/push_token_node
