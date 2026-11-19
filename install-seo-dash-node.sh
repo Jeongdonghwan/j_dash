@@ -91,6 +91,7 @@ def ptype(path, part=''):
     """페이지 유형 — 검색에 어떤 종류의 페이지가 걸리는지 보려고 나눈다."""
     if path == '/': return 'home'
     if re.match(r'/blog/.+', path): return 'post'
+    if part.startswith('sitemap-posts'): return 'post'   # 동적(Flask) 사이트의 질문 글 묶음
     if part.startswith('sitemap-kw'): return 'kw'
     if part == 'sitemap-core.xml': return 'hub'
     return 'kw' if path.count('/') == 2 and '-' in path else 'hub'   # 묶음을 안 나눈 사이트: 한 단 주소에 '-' 가 있으면 키워드 페이지
@@ -282,8 +283,17 @@ def health(site, sm):
     for p in paths:
         q = os.path.join(site['root'], p.strip('/'))
         f = next((x for x in (os.path.join(q, 'index.html'), q + '.html', q) if os.path.isfile(x)), None)
-        if not f: bad['파일 없음'] += 1; continue
-        t = open(f, encoding='utf-8', errors='ignore').read(20000)
+        if f:
+            t = open(f, encoding='utf-8', errors='ignore').read(20000)
+        else:   # 파일 없는 동적 사이트(Flask 등): 실제 주소로 받아 본다
+            u = sm[p][1]
+            try:
+                with urllib.request.urlopen(urllib.request.Request(u, headers={'User-Agent': 'seo-dash-health'}), timeout=15) as r:
+                    t = r.read(20000).decode('utf-8', 'ignore')
+            except urllib.error.HTTPError as e:
+                bad[f'응답 {e.code}'] += 1; continue
+            except Exception:
+                bad['접속 실패'] += 1; continue
         if 'rel="canonical"' not in t: bad['canonical 없음'] += 1
         if re.search(r'<meta name="robots" content="[^"]*noindex', t): bad['noindex'] += 1
     try:
