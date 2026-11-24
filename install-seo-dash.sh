@@ -339,6 +339,9 @@ def main():
         new = [p for p in sm if p not in st['paths']]
         for p in new: st['paths'][p] = '' if first else TODAY   # 첫 실행은 기준선(오늘 열림으로 세지 않는다)
         for p in [p for p in st['paths'] if p not in sm]: del st['paths'][p]
+        lm0 = st.get('lm'); lm = {p: sm[p][0] for p in sm}   # 내용이 바뀐 주소(lastmod 변경)도 수집 요청 — '--resend-all' 은 열린 전 주소를 한 번 다시
+        changed = [p for p in sm if p not in new and (('--resend-all' in sys.argv) or (lm0 is not None and lm0.get(p, lm[p]) != lm[p]))]
+        st['lm'] = lm
         blog = [p for p in sm if re.match(r'/blog/.+', p)]
         for d, c in a['days'].items(): st['days'].setdefault(d, {}).update(c)
         st['days'].setdefault(TODAY, {}).update({
@@ -356,7 +359,7 @@ def main():
             if 'pending_etc' not in st:  # 옛 상태: 공용 창구가 거절했으면 전체를 다시 보낸다
                 st['pending_etc'] = [] if (inow or {}).get('indexnow') in (200, 202) else [v[1] for v in sm.values()]
             for q in ('pending', 'pending_etc'):
-                st[q] = list(dict.fromkeys(st.get(q, []) + [sm[p][1] for p in new]))
+                st[q] = list(dict.fromkeys(st.get(q, []) + [sm[p][1] for p in new] + [sm[p][1] for p in changed]))
             if 'created' not in st or (not st['created'] and st.get('created_try') != TODAY[:7]):   # 실패하면 달에 한 번만 다시
                 st['created'], st['created_try'] = whois_created(s['hosts'][0]), TODAY[:7]
         if '--indexnow' in sys.argv and not s['preview'] and (st['pending'] or st.get('pending_etc')):
