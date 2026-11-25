@@ -668,6 +668,11 @@ tr.row{cursor:pointer}tr.row:hover td{background:#fafbfc}tr.pre td:first-child{c
 dl.gloss{margin:0;display:grid;grid-template-columns:190px 1fr}dl.gloss dt,dl.gloss dd{margin:0;padding:11px 4px;border-bottom:1px solid var(--line)}dl.gloss dt{font-weight:600}dl.gloss dd{color:#3a4350}
 details summary{cursor:pointer;color:var(--mute);font-size:12px;margin-top:12px}details .scroll{margin-top:8px;border:1px solid var(--line);border-radius:10px}
 .al{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:8px 0}.al .lv{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap;margin-top:1px}.alsite{padding:12px 0;border-top:1px solid var(--line)}.alsite:first-of-type{border-top:0;padding-top:0}.alsite>a{text-decoration:none}
+.cn{color:var(--naver)}.cg{color:var(--google)}.up{color:var(--good);font-weight:600;margin-left:2px}
+.alertbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fdecea;border:1px solid #f3c9c4;color:var(--bad);border-radius:12px;padding:12px 16px;margin-bottom:16px;text-decoration:none}.alertbar span{color:#7a2a24;font-size:13px}.alertbar .go{margin-left:auto;font-weight:600;color:var(--bad)}
+.strip{display:flex;flex-wrap:wrap;gap:8px 22px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 18px;margin-bottom:18px;font-size:13px;color:var(--mute)}.strip b{color:var(--ink);font-variant-numeric:tabular-nums;font-size:15px;margin-left:4px}.strip b.cn{color:var(--naver)}.strip b.cg{color:var(--google)}
+.stbl td{vertical-align:middle;padding:12px 14px}.stbl td b{font-size:15px}.stbl tr.bad td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
+.vs{display:inline-flex;align-items:center;gap:10px}.cv{display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.9}.cv span:first-child{width:40px}.stbl .pb{width:70px}
 .sitehead{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin:-4px 0 16px;font-size:12px;color:var(--mute)}.sitehead a{color:var(--ink)}
 @media(max-width:900px){.shell{grid-template-columns:minmax(0,1fr)}aside{display:none}main{padding:0 14px 60px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}.donut{grid-template-columns:1fr}dl.gloss{grid-template-columns:1fr}dl.gloss dt{border-bottom:0;padding-bottom:0}
 .tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px}.tabs a{padding:7px 12px;border-radius:9px;background:var(--card);border:1px solid var(--line);text-decoration:none;white-space:nowrap;font-size:13px}.tabs a.on{background:var(--ink);color:#fff;border-color:var(--ink)}.swbtn{min-width:0;max-width:none;width:100%}.sw,.topbar .grow{flex:1 0 100%}.topbar{position:static;padding:14px 0}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:12px}.kpi b{font-size:22px}}
@@ -773,15 +778,24 @@ const MS=[{k:'src_naver',t:'네이버 검색',c:C.naver},{k:'src_google',t:'구�
 const made=s=>s.total+s.left_pages+s.left_posts,RNG=[[14,'14일'],[30,'30일'],[45,'45일']];
 const plink=(s,p)=>`<a href="https://${esc(s.host)}${esc(encodeURI(p))}" target="_blank" rel="noopener noreferrer">${esc(p)}</a>`;
 
-const COLS=[['사이트',s=>s.name,null],['visitors',(s,c)=>sum(s.days,'visitors',c.y,c.y),'방문자 어제'],['search',(s,c)=>sum(s.days,searchOf,c.w,c.y),'검색 유입 7일'],['tel',(s,c)=>sum(s.days,'tel',c.w),'전화 7일'],['total',s=>s.total],['made',s=>made(s)],['new_pages',(s,c)=>sum(s.days,'new_pages',c.t,c.t)],['new_posts',(s,c)=>sum(s.days,'new_posts',c.t,c.t)],['bot_naver',(s,c)=>sum(s.days,'bot_naver',c.w,c.y),'네이버 수집 7일'],['bot_google',(s,c)=>sum(s.days,'bot_google',c.w,c.y),'구글 수집 7일'],['cov_naver',s=>s.total?s.crawl.naver/s.total:0],['cov_google',s=>s.total?s.crawl.google/s.total:0],['health',s=>Object.keys(s.health||{}).length]];
+const COLS=[['사이트',s=>s.name,null],['visitors',(s,c)=>sum(s.days,'visitors',c.y,c.y),'방문자 어제'],['search',(s,c)=>sum(s.days,searchOf,c.w,c.y),'검색 유입 7일'],['tel',(s,c)=>sum(s.days,'tel',c.w),'전화 7일'],['total',s=>s.total],['made',s=>made(s)],['new_pages',(s,c)=>sum(s.days,'new_pages',c.t,c.t)],['new_posts',(s,c)=>sum(s.days,'new_posts',c.t,c.t)],['bot_naver',(s,c)=>sum(s.days,'bot_naver',c.w,c.y),'네이버 수집 7일'],['bot_google',(s,c)=>sum(s.days,'bot_google',c.w,c.y),'구글 수집 7일'],['cov_naver',s=>s.total?s.crawl.naver/s.total:0],['cov_google',s=>s.total?s.crawl.google/s.total:0],['health',s=>alerts(s).length]];
 function spark(days){const v=series(days,14).map(x=>x.visitors||0),m=Math.max(1,...v),W=84,H=24;if(!v.some(Boolean))return '<span class="zero">-</span>';
   const pts=v.map((y,i)=>(i*W/13).toFixed(1)+','+(H-2-(H-4)*y/m).toFixed(1)).join(' ');
   return `<svg width="${W}" height="${H}" role="img" aria-label="방문자 14일 추이"><title>최근 14일 방문자 (최대 ${m})</title><polygon points="0,${H} ${pts} ${W},${H}" fill="var(--visit)" opacity=".12"/><polyline points="${pts}" fill="none" stroke="var(--visit)" stroke-width="1.6" stroke-linejoin="round"/></svg>`}
+/* 사이트별 표: 칸 9개. [정렬 기준 COLS 번호, 용어 키, 머리 글자] */
+const SCOL=[[0,null,'사이트'],[1,'visitors','방문자 어제'],[2,'search','검색 유입 7일'],[3,'tel','전화 7일'],[4,'total','공개 / 전체 제작'],[8,'bot_naver','네이버 수집 7일'],[9,'bot_google','구글 수집 7일'],[10,'cov_naver','수집률'],[12,'health','상태']];
+const pbar=(r,c)=>`<span class="pb"><i style="width:${Math.min(100,r*100)}%;background:${c}"></i></span>`;
 function siteRows(){const c={y:day(1),w:day(7),t:D.today},q=query.trim().toLowerCase();
   const rows=D.sites.filter(s=>!q||s.name.toLowerCase().includes(q)||s.host.includes(q)).map(s=>({s,v:COLS.map(col=>col[1](s,c))}));
   rows.sort((a,b)=>(a.s.preview-b.s.preview)||((typeof a.v[sortK]==='string'?a.v[sortK].localeCompare(b.v[sortK],'ko'):a.v[sortK]-b.v[sortK])*sortDir));
-  $('#st').innerHTML=`<tr>${COLS.map((col,i)=>`<th data-sort="${i}">${i?h(col[0],col[2]):'사이트'}<span class="ar">${i===sortK?(sortDir<0?'▾':'▴'):''}</span></th>${i?'':'<th>방문자 14일</th>'}`).join('')}</tr>`+
-  (rows.map(({s,v})=>`<tr class="row${s.preview?' pre':''}" data-go="#/s/${esc(s.id)}"><td>${esc(s.name)}${s.preview?'<span class="tag">미리보기</span>':''}</td><td>${spark(s.days)}</td>${v.slice(1,10).map(x=>`<td>${f(x)}</td>`).join('')}<td><span class="pb"><i style="width:${v[10]*100}%;background:var(--naver)"></i></span>${pct(s.crawl.naver,s.total)}</td><td><span class="pb"><i style="width:${v[11]*100}%;background:var(--google)"></i></span>${pct(s.crawl.google,s.total)}</td><td>${v[12]?`<span class="warn">확인 필요 ${v[12]}</span>`:'<span class="ok">정상</span>'}</td></tr>`).join('')||`<tr><td class="mute l" colspan="14">찾는 사이트가 없습니다</td></tr>`)}
+  $('#st').innerHTML=`<tr>${SCOL.map(([k,hk,t])=>`<th data-sort="${k}"${k?'':' class="l"'}>${hk?h(hk,t):t}<span class="ar">${k===sortK?(sortDir<0?'▾':'▴'):''}</span></th>`).join('')}</tr>`+
+  (rows.map(({s,v})=>{const m=made(s)||1,np=v[6],npo=v[7];
+    return `<tr class="row${s.preview?' pre':''}${v[12]?' bad':''}" data-go="#/s/${esc(s.id)}"><td class="l"><b>${esc(s.name)}</b>${s.preview?'<span class="tag">미리보기</span>':''}</td>
+    <td><span class="vs">${spark(s.days)}<b>${f(v[1])}</b></span></td><td><b>${f(v[2])}</b></td><td>${f(v[3])}</td>
+    <td><div>${pbar(s.total/m,'#3a4350')}${f(s.total)} <span class="mute small">/ ${f(made(s))}</span></div>${np||npo?`<div class="up small">오늘 ${[np?`페이지 +${np.toLocaleString('ko-KR')}`:'',npo?`글 +${npo}`:''].filter(Boolean).join(' · ')}</div>`:''}</td>
+    <td class="cn">${f(v[8])}</td><td class="cg">${f(v[9])}</td>
+    <td class="l"><div class="cv"><span class="cn">네이버</span>${pbar(v[10],'var(--naver)')}${pct(s.crawl.naver,s.total)}</div><div class="cv"><span class="cg">구글</span>${pbar(v[11],'var(--google)')}${pct(s.crawl.google,s.total)}</div></td>
+    <td>${v[12]?`<span class="warn">확인 ${v[12]}</span>`:'<span class="ok">정상</span>'}</td></tr>`}).join('')||`<tr><td class="mute l" colspan="9">찾는 사이트가 없습니다</td></tr>`)}
 
 /* 점검이 필요한 사이트: 자료에서 규칙으로 뽑는다. [심각도, 무엇이 문제인지, 무엇을 하면 되는지] */
 function alerts(s){const a=[],d=s.days,t=D.today,y=day(1),w=day(7),T=d.find(x=>x.d===t)||{},hour=+D.updated.slice(11,13);
@@ -822,20 +836,18 @@ function overview(){
   const tot=fn=>live.reduce((a,s)=>a+fn(s),0),dsum=(k,a,b)=>sum(all,k,a,b),bad=D.sites.filter(s=>alerts(s).length);
   const src={};live.forEach(s=>s.days.forEach(x=>{if(x.d>=w)for(const k in x)if(k.startsWith('src_'))src[k.slice(4)]=(src[k.slice(4)]||0)+x[k]}));
   topbar('전체 현황',`운영 사이트 ${live.length}곳${D.sites.length-live.length?` · 미리보기 ${D.sites.length-live.length}곳`:''} · 갱신 ${esc(D.updated)}`,seg('range',RNG,range));
-  main.innerHTML=`${estNote(ds)}
+  const L=n=>Number(n||0).toLocaleString('ko-KR');
+  main.innerHTML=`${bad.length?`<a class="alertbar" href="#/check">${ic('alert')}<b>점검이 필요한 사이트 ${bad.length}곳</b><span>${bad.slice(0,4).map(s=>esc(s.name)).join(' · ')}${bad.length>4?' 외':''}</span><span class="go">보기 →</span></a>`:''}
   <div class="kpis k4">${kpi('visitors','users','c-visit',f(dsum('visitors',y,y)),delta(dsum('visitors',y,y),dsum('visitors',day(2),day(2))),'어제 방문자')}
   ${kpi('search','bot','c-search',f(dsum(searchOf,w,y)),delta(dsum(searchOf,w,y),dsum(searchOf,day(14),day(8))),'검색 유입 7일')}
-  ${kpi('tel','phone','c-ink',f(dsum('tel',w)),'최근 7일','전화 클릭 7일')}
-  ${kpi('total','file','c-ink',f(tot(s=>s.total)),`전체 제작 ${tot(made).toLocaleString('ko-KR')}`)}
-  ${kpi('new_pages','plus','c-ink',f(dsum('new_pages',t,t)),`오늘 발행 글 ${dsum('new_posts',t,t).toLocaleString('ko-KR')}`)}
-  ${kpi('bot_naver','bot','c-naver',f(dsum('bot_naver',y,y)),`7일 ${dsum('bot_naver',w,y).toLocaleString('ko-KR')}`,'어제 네이버 수집')}
-  ${kpi('bot_google','bot','c-google',f(dsum('bot_google',y,y)),`7일 ${dsum('bot_google',w,y).toLocaleString('ko-KR')}`,'어제 구글 수집')}
-  ${kpi('health',bad.length?'alert':'eye',bad.length?'c-bad':'c-naver',bad.length?`<span class="warn">${bad.length}곳</span>`:'정상',bad.length?'<a href="#/check">어떤 사이트인지 보기</a>':'전체 이상 없음','점검 필요')}</div>
+  ${kpi('bot_naver','bot','c-naver',f(dsum('bot_naver',y,y)),delta(dsum('bot_naver',y,y),dsum('bot_naver',day(2),day(2))),'어제 네이버 수집')}
+  ${kpi('bot_google','bot','c-google',f(dsum('bot_google',y,y)),delta(dsum('bot_google',y,y),dsum('bot_google',day(2),day(2))),'어제 구글 수집')}</div>
+  <div class="strip"><span>${h('total')} <b>${L(tot(s=>s.total))}</b> <span class="mute">/ 전체 제작 ${L(tot(made))}</span></span><span>${h('new_pages')} <b>+${L(dsum('new_pages',t,t))}</b></span><span>${h('new_posts')} <b>+${L(dsum('new_posts',t,t))}</b></span><span>${h('tel','전화 클릭 7일')} <b>${L(dsum('tel',w))}</b></span><span>네이버 수집 7일 <b class="cn">${L(dsum('bot_naver',w,y))}</b></span><span>구글 수집 7일 <b class="cg">${L(dsum('bot_google',w,y))}</b></span></div>
+  <div class="card flush full"><div class="chead" style="padding-bottom:14px"><div><h2>사이트별</h2><div class="mute small">줄을 누르면 그 사이트로 갑니다 · 표 머리를 누르면 정렬</div></div><div class="filters"><input id="sq" type="search" placeholder="사이트 찾기" aria-label="사이트 찾기" value="${esc(query)}"></div></div><div class="scroll"><table id="st" class="stbl"></table></div></div>
+  ${estNote(ds)}
   <div class="grid3"><div class="card"><div class="chead"><h2>방문자와 검색 유입</h2>${legend(VS)}</div><div class="chart" id="c1"></div>${dayTable(ds,[['방문자','visitors'],['방문','visits'],['검색 유입',searchOf],['전화 클릭','tel']])}</div>
   <div class="card"><div class="chead"><h2>${h('src')} <span class="mute small">최근 7일</span></h2></div>${donut(src)}</div></div>
-  <div class="card full"><div class="chead"><h2>검색 로봇 수집</h2>${legend(BS)}</div><div class="chart" id="c2"></div>${dayTable(ds,[['네이버','bot_naver'],['구글','bot_google'],['수집 낭비','rsc_naver']])}</div>
-  <div class="card flush"><div class="chead" style="padding-bottom:14px"><h2>사이트별</h2><div class="filters"><input id="sq" type="search" placeholder="사이트 찾기" aria-label="사이트 찾기" value="${esc(query)}"></div></div><div class="scroll"><table id="st"></table></div></div>
-  <p class="mute small" style="margin-top:10px">줄을 누르면 그 사이트로 갑니다. 표 머리를 누르면 그 값으로 정렬됩니다. 점선 밑줄이 있는 이름에 마우스를 올리면 뜻이 나옵니다.</p>`;
+  <div class="card full"><div class="chead"><h2>검색 로봇 수집</h2>${legend(BS)}</div><div class="chart" id="c2"></div>${dayTable(ds,[['네이버','bot_naver'],['구글','bot_google'],['수집 낭비','rsc_naver']])}</div>`;
   siteRows();$('#sq').oninput=e=>{query=e.target.value;siteRows()};
   $('#st').onclick=e=>{const th=e.target.closest('th[data-sort]');if(th){const i=+th.dataset.sort;if(i===sortK)sortDir=-sortDir;else{sortK=i;sortDir=i?-1:1}siteRows()}};
   charts.length=0;charts.push(()=>lineChart($('#c1'),ds,VS),()=>lineChart($('#c2'),ds,BS));draw()}
