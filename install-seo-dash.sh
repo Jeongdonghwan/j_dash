@@ -264,6 +264,14 @@ def whois_created(host):
         return ''
 
 
+def brand(root):
+    """상호 — 메인 페이지의 og:site_name, 없으면 title 의 '|' 앞. 못 읽으면 ''(화면이 도메인을 쓴다)."""
+    try: t = open(os.path.join(root, 'index.html'), encoding='utf-8', errors='ignore').read(40000)
+    except Exception: return ''
+    m = re.search(r'property="og:site_name"\s+content="([^"]{1,40})"', t) or re.search(r'<title>([^<|]{1,40})\|', t)
+    return html.unescape(m.group(1)).split('|')[0].strip() if m else ''
+
+
 def deployed_at(root):
     """마지막으로 사이트 내용이 바뀐 시각(KST) — deploy 브랜치를 받는 폴더는 마지막 커밋 시각, 서버에서 빌드하는 폴더는 sitemap.xml 수정 시각."""
     ts = None
@@ -383,7 +391,7 @@ def main():
         left_pages, left_posts = sum(x.get('pages', 0) for x in sched), sum(x.get('posts', 0) for x in sched)
         dl = sorted(st['days'])[-45:]
         days = [dict(st['days'][d], d=d, est=0 if vstart and d >= vstart else 1) for d in dl]
-        base = {'id': s['id'], 'name': s['name'], 'host': s['hosts'][0], 'preview': s['preview'], 'created': st.get('created', ''),
+        base = {'id': s['id'], 'name': s['name'], 'brand': brand(s['root']), 'host': s['hosts'][0], 'preview': s['preview'], 'created': st.get('created', ''),
                 'pages': len(sm) - len(blog), 'posts': len(blog), 'total': len(sm),
                 'left_pages': left_pages, 'left_posts': left_posts,   # 전체 제작 = 공개(total) + 남은 것 — 같은 기준으로 센다
                 'crawl': {b: len(got[b]) for b in got}, 'health': health(s, sm), 'days': days,
@@ -399,6 +407,7 @@ def main():
                       visits=[{k: v for k, v in x.items() if k != 'd' and not k.startswith('_')} for x in sess[:400]])
         json.dump(detail, open(os.path.join(OUT, f'site-{s["id"]}.json'), 'w', encoding='utf-8'), ensure_ascii=False)
     for rd in sorted(glob.glob(os.path.join(OUT, 'remote', '*'))):   # 다른 서버 수집기가 올려 둔 결과(dash_app.py /api/push) — 그쪽 사이트를 이 화면에 합친다
+        if not os.path.isfile(os.path.join(rd, 'data.json')): continue   # pc-gsc 처럼 서치콘솔 결과만 올리는 곳
         try:
             for x in json.load(open(os.path.join(rd, 'data.json'), encoding='utf-8'))['sites']:
                 f = os.path.join(rd, f'site-{x.get("id", "")}.json')
@@ -524,6 +533,9 @@ class H(http.server.BaseHTTPRequestHandler):
         if not self.authed():
             return self.send(401, '{"error":"login"}', 'application/json') if p.startswith('/api/') else self.send(302, extra=[('Location', '/login')])
         if p == '/': return self.send(200, page('app.html'))
+        if p == '/api/gsc':   # PC 가 올린 서치콘솔 결과(gsc_push.py) — 없으면 빈 값
+            f = os.path.join(OUT, 'remote', 'pc-gsc', 'gsc.json')
+            return self.send(200, open(f, 'rb').read() if os.path.isfile(f) else b'{}', 'application/json; charset=utf-8')
         m = re.fullmatch(r'/api/(data|site/([a-z0-9.-]{1,120}))', p)
         if m:
             f = os.path.join(OUT, 'data.json' if m.group(1) == 'data' else f'site-{m.group(2)}.json')
@@ -532,11 +544,11 @@ class H(http.server.BaseHTTPRequestHandler):
 
     def push(self, name):
         """다른 서버의 수집기가 결과 파일을 올린다 — 로그인 대신 토큰($DASH_STATE/push_token)으로 확인한다."""
-        tf = os.path.join(STATE, 'push_token')
-        tok = open(tf).read().strip() if os.path.isfile(tf) else ''
+        toks = [open(f).read().strip() for f in (os.path.join(STATE, 'push_token'), os.path.join(STATE, 'push_token_gsc')) if os.path.isfile(f)]   # _gsc = PC 서치콘솔 업로드용
         node = re.sub(r'[^a-z0-9-]', '', self.headers.get('X-Dash-Node', '').lower())[:30]
         n = int(self.headers.get('Content-Length') or 0)
-        if not tok or not node or not hmac.compare_digest(self.headers.get('X-Dash-Token', ''), tok): return self.send(403, '{"error":"token"}', 'application/json')
+        got = self.headers.get('X-Dash-Token', '')
+        if not node or not any(t and hmac.compare_digest(got, t) for t in toks): return self.send(403, '{"error":"token"}', 'application/json')
         if not 0 < n <= 8_000_000: return self.send(413, '{"error":"size"}', 'application/json')
         raw = self.rfile.read(n)
         try: json.loads(raw)
@@ -548,7 +560,7 @@ class H(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         p = urllib.parse.urlparse(self.path).path
-        m = re.fullmatch(r'/api/push/((?:data|site-[a-z0-9.-]{1,120})\.json)', p)
+        m = re.fullmatch(r'/api/push/((?:data|gsc|site-[a-z0-9.-]{1,120})\.json)', p)
         if m: return self.push(m.group(1))
         ip = self.headers.get('X-Real-IP') or self.client_address[0]
         a = load_auth()
@@ -673,6 +685,23 @@ details summary{cursor:pointer;color:var(--mute);font-size:12px;margin-top:12px}
 .strip{display:flex;flex-wrap:wrap;gap:8px 22px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 18px;margin-bottom:18px;font-size:13px;color:var(--mute)}.strip b{color:var(--ink);font-variant-numeric:tabular-nums;font-size:15px;margin-left:4px}.strip b.cn{color:var(--naver)}.strip b.cg{color:var(--google)}
 .stbl td{vertical-align:middle;padding:12px 14px}.stbl td b{font-size:15px}.stbl tr.bad td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
 .vs{display:inline-flex;align-items:center;gap:10px}.cv{display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.9}.cv span:first-child{width:40px}.stbl .pb{width:70px}
+.lv-bad{--lv:var(--bad)}.lv-warn{--lv:#d99a00}.lv-good{--lv:var(--good)}.lv-none{--lv:#aab2bd}
+.sumbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}.sumbar button{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--lv);border-radius:var(--r);padding:12px 16px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:baseline}
+.sumbar button span{color:var(--mute);font-size:14px;font-weight:600}.sumbar button b{font-size:28px;font-variant-numeric:tabular-nums;color:var(--lv)}.sumbar button.lv-none b{color:var(--ink)}.sumbar button.on{box-shadow:0 0 0 2px var(--ink) inset}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px}
+.sc{display:block;text-decoration:none;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--lv);border-radius:var(--r);padding:14px 16px;min-width:0}.sc:hover{border-color:#c9d0d8;border-top-color:var(--lv)}
+.sc-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.sc-h b{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{font-size:12px;font-weight:700;padding:2px 10px;border-radius:4px;color:#fff;background:var(--lv);flex:none}
+.sc-m{font-size:12px;color:var(--mute);margin:3px 0 10px}
+.fun{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.st{background:var(--soft);border-radius:6px;padding:7px 8px;border-bottom:3px solid var(--lv);min-width:0}
+.st span,.st em{display:block;font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:normal}.st b{display:block;font-size:17px;line-height:1.35;font-variant-numeric:tabular-nums}.st.lv-bad em,.st.lv-bad b{color:var(--bad)}.st.lv-bad em{font-weight:700}
+.sc-todo{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:3px;font-size:13px}.sc-todo li{padding-left:14px;position:relative;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sc-todo li:before{content:'';position:absolute;left:0;top:7px;width:7px;height:7px;background:#aab2bd}
+.sc-todo li.t-bad:before{background:var(--bad)}.sc-todo li.t-warn:before{background:#d99a00}.sc-todo li.more{color:var(--mute);font-size:12px}.sc-todo li.more:before{display:none}
+.sc-ok{margin:10px 0 0;font-size:13px;color:var(--good);font-weight:600}.sc-log{margin-top:10px;font-size:12px;color:var(--mute);border-top:1px solid var(--line);padding-top:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc-big{border-top:4px solid var(--lv)}.sc-big .sc-h{margin-bottom:12px}.sc-big .st b{font-size:22px}.sc-big .st span,.sc-big .st em{font-size:12px}
+.evs{display:grid;gap:2px}.ev{display:grid;grid-template-columns:44px 64px 1fr;gap:8px;align-items:baseline;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}.ev .tag{margin:0;text-align:center}
+@media(max-width:900px){.sumbar{grid-template-columns:repeat(2,minmax(0,1fr))}.cards{grid-template-columns:minmax(0,1fr)}.fun{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .sitehead{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin:-4px 0 16px;font-size:12px;color:var(--mute)}.sitehead a{color:var(--ink)}
 @media(max-width:900px){.shell{grid-template-columns:minmax(0,1fr)}aside{display:none}main{padding:0 14px 60px}.grid2,.grid3{grid-template-columns:minmax(0,1fr)}.donut{grid-template-columns:1fr}dl.gloss{grid-template-columns:1fr}dl.gloss dt{border-bottom:0;padding-bottom:0}
 .tabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 14px}.tabs a{padding:7px 12px;border-radius:9px;background:var(--card);border:1px solid var(--line);text-decoration:none;white-space:nowrap;font-size:13px}.tabs a.on{background:var(--ink);color:#fff;border-color:var(--ink)}.swbtn{min-width:0;max-width:none;width:100%}.sw,.topbar .grow{flex:1 0 100%}.topbar{position:static;padding:14px 0}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:12px}.kpi b{font-size:22px}}
@@ -852,14 +881,85 @@ function overview(){
   $('#st').onclick=e=>{const th=e.target.closest('th[data-sort]');if(th){const i=+th.dataset.sort;if(i===sortK)sortDir=-sortDir;else{sortK=i;sortDir=i?-1:1}siteRows()}};
   charts.length=0;charts.push(()=>lineChart($('#c1'),ds,VS),()=>lineChart($('#c2'),ds,BS));draw()}
 
-const TABS=[['','개요','pulse'],['visits','방문 기록','users'],['crawl','수집·색인','bot'],['publish','공개·발행','cal'],['log','작업 기록','book']];
+/* ===== SEO 분석: 사이트마다 판정(막힘·주의·좋음) + 단계 5칸 + 할 일 + 작업 기록 ===== */
+let G=null,fl='all';
+const hk=x=>String(x||'').toLowerCase().replace(/^www\./,'');
+const gscOf=s=>(G&&G.sites&&(G.sites[hk(s.host)]||G.sites[hk(s.name)]))||null;
+const dAgo=d=>d?Math.round((new Date(D.today)-new Date(d))/864e5):null;
+const lastOf=(days,k)=>{for(let i=days.length-1;i>=0;i--)if(val(days[i],k))return days[i].d;return null};
+const RANK={bad:3,warn:2,good:1,none:0},LVT={bad:'막힘',warn:'주의',good:'좋음',none:'자료 없음'};
+const N0=n=>Number(n||0).toLocaleString('ko-KR');
+function gsum(g,k,n){const i={clk:1,imp:2}[k];return g?g.days.slice(-n).reduce((a,x)=>a+x[i],0):0}
+function grade(s){
+  const d=s.days,w=day(7),g=gscOf(s),span=d.length?dAgo(d[0].d)+1:0,todo=[];
+  const crawl=(b,name)=>{const n7=sum(d,'bot_'+b,w),last=lastOf(d,'bot_'+b),ago=last?dAgo(last):null;
+    const lv=!s.total?'none':n7===0?'bad':n7<Math.max(7,s.total*.005)?'warn':'good';
+    return {t:name,v:N0(n7),sub:n7?(ago===0?'오늘 읽음':`${ago}일 전 읽음`):`${last?ago:span}일째 0`,lv,ago,last,n7}};
+  const nv=crawl('naver','네이버 수집'),gg=crawl('google','구글 수집');
+  const ix=g&&g.idx.n?{t:'구글 색인',v:pct(g.idx.ok,g.idx.n),sub:`검사 ${g.idx.ok}/${g.idx.n}`,lv:g.idx.ok/g.idx.n<.2?'bad':g.idx.ok/g.idx.n<.5?'warn':'good'}:{t:'구글 색인',v:'-',sub:g?'검사 전':'연결 안 됨',lv:'none'};
+  const imp=gsum(g,'imp',28),clk=gsum(g,'clk',28),age=s.created?dAgo(s.created):span;
+  const im=g?{t:'구글 노출',v:N0(imp),sub:`클릭 ${N0(clk)}`,lv:!imp?(age>30?'bad':'warn'):!clk?'warn':'good'}:{t:'구글 노출',v:'-',sub:'연결 안 됨',lv:'none'};
+  const sv=sum(d,searchOf,w),se={t:'검색 유입',v:N0(sv),sub:`N ${N0(sum(d,'src_naver',w))} · G ${N0(sum(d,'src_google',w))}`,lv:sv?'good':'warn'};
+  const stages=[nv,gg,ix,im,se];
+  alerts(s).filter(a=>!/로봇이 7일/.test(a[1])).forEach(a=>todo.push(a));
+  if(!s.preview&&s.total){
+    if(nv.lv==='bad')todo.push(['bad',`네이버가 ${nv.sub} — 안쪽 페이지를 안 읽어 갑니다`,'서치어드바이저 → 요청 → 사이트맵·RSS 제출 확인, "웹 페이지 수집"에 메인·허브 주소 요청 (네이버는 API 가 없어 직접 합니다)']);
+    if(gg.lv==='bad')todo.push(['bad',`구글이 ${gg.sub} — 페이지를 안 읽어 갑니다`,'서치콘솔 속성 등록과 사이트맵 제출을 확인합니다']);
+    if(G&&G.sites&&!g)todo.push(['warn','서치콘솔에 이 사이트가 없습니다','서치콘솔에 속성을 추가하고 서비스 계정을 사용자(전체 권한)로 넣으면 다음 날부터 색인·노출이 잡힙니다']);
+    if(g&&g.idx.n>=8&&g.idx.ok/g.idx.n<.5){const top=Object.entries(g.idx.states).filter(([k])=>!/생성되었|indexed/i.test(k)).sort((a,b)=>b[1]-a[1])[0]||['',0],k=top[0];
+      todo.push([ix.lv,`구글 색인 표본 ${g.idx.ok}/${g.idx.n} — 가장 많은 상태: ${k}`,/발견/.test(k)?'구글이 주소는 알지만 아직 안 읽었습니다. 메인·허브에서 이 페이지들로 가는 내부 링크를 늘립니다':/크롤링/.test(k)?'읽고도 색인하지 않았습니다. 같은 틀 문장이 많은지(유사도) 보고 페이지마다 고유 사실을 보강합니다':/알려지지/.test(k)?'구글이 주소를 모릅니다. 사이트맵 제출 상태를 확인합니다':'서치콘솔 URL 검사에서 이유를 봅니다']);}
+    if(g&&g.sm.errors)todo.push(['warn',`구글 사이트맵 오류 ${g.sm.errors}건`,'서치콘솔 → Sitemaps 에서 오류 내용을 봅니다']);
+    if(imp>=100&&!clk)todo.push(['info',`구글 노출 ${N0(imp)}회인데 클릭 0`,'상위 검색어와 title·description 이 맞는지 봅니다']);
+    if(!s.left_pages&&age>=30&&sv<10)todo.push(['info',`남은 페이지가 없고 검색 유입이 적습니다 (공개 ${N0(s.total)}쪽)`,'새 키워드 축(지역·서비스·수식어) 리스트업 → 하루 공개 일정 추가']);
+    if(!s.posts)todo.push(['info','블로그 글이 없습니다','관련 키워드로 하루 1~2편 자동 발행을 설정합니다']);
+    else if(!s.left_posts&&!sum(d,'new_posts',day(14)))todo.push(['warn','블로그 발행이 14일 넘게 멈췄습니다','남은 예약 글이 없습니다 — 자동 발행을 이어갑니다']);}
+  const lv=s.total?['bad','warn','good'].find(l=>[nv,gg,ix,im].some(x=>x.lv===l)||todo.some(t=>t[0]===l&&l!=='good'))||'good':'none';
+  return {lv,stages,todo:todo.sort((a,b)=>(RANK[b[0]]||1)-(RANK[a[0]]||1)),age,g,imp,clk}}
+function events(s){const e=[],g=gscOf(s),M=(G&&G.manual)||{};
+  s.days.forEach(x=>{const t=[x.new_pages?`페이지 ${N0(x.new_pages)}개 공개`:'',x.new_posts?`글 ${x.new_posts}편 발행`:'',x.inow?`IndexNow ${N0(x.inow)}개 전송`:''].filter(Boolean);if(t.length)e.push([x.d,t.join(' · '),'auto'])});
+  ((g&&g.log)||[]).forEach(l=>e.push([l[0],l[1],'gsc']));(M[hk(s.host)]||M[hk(s.name)]||[]).forEach(l=>e.push([l[0],l[1],'manual']));
+  return e.sort((a,b)=>b[0].localeCompare(a[0])||(a[2]==='manual'?-1:1))}
+const EVT={auto:'자동',gsc:'서치콘솔',manual:'작업'};
+const stage=x=>`<div class="st lv-${x.lv}"><span>${esc(x.t)}</span><b>${x.v}</b><em>${esc(x.sub)}</em></div>`;
+const TDL={bad:'막힘',warn:'주의',info:'참고'};
+function home(){const rows=D.sites.filter(s=>!s.preview).map(s=>({s,r:grade(s)})),cnt={bad:0,warn:0,good:0,none:0};rows.forEach(x=>cnt[x.r.lv]++);
+  const nv0=rows.filter(x=>x.r.stages[0].lv==='bad'),todoN=rows.reduce((a,x)=>a+x.r.todo.filter(t=>t[0]!=='info').length,0);
+  rows.sort((a,b)=>RANK[b.r.lv]-RANK[a.r.lv]||b.r.todo.length-a.r.todo.length||b.s.total-a.s.total);
+  topbar('SEO 분석',`운영 사이트 ${rows.length}곳 · 수집 ${esc(D.updated)}${G&&G.updated?' · 서치콘솔 '+esc(G.updated):' · 서치콘솔 자료 아직 없음'}`,'');
+  const btn=(k,t,n)=>`<button type="button" data-fl="${k}" class="lv-${k==='all'?'none':k}${fl===k?' on':''}"><span>${t}</span><b>${n}</b></button>`;
+  main.innerHTML=`<div class="sumbar">${btn('bad','막힘',cnt.bad)}${btn('warn','주의',cnt.warn)}${btn('good','좋음',cnt.good)}${btn('all','전체',rows.length)}</div>
+  ${nv0.length?`<p class="mute small" style="margin:0 0 10px">칸 기간 — 수집·유입 7일, 노출 28일, 색인은 URL 검사 표본. </p><p class="note">네이버 수집이 7일 동안 0인 사이트 ${nv0.length}곳 · 확인할 일 ${todoN}건 — 카드를 누르면 사이트별 분석과 할 일이 열립니다.</p>`:''}
+  <div class="cards">${rows.filter(x=>fl==='all'||x.r.lv===fl).map(({s,r})=>{const ev=events(s).find(e=>e[2]!=='auto')||events(s)[0];
+    return `<a class="sc lv-${r.lv}" href="#/s/${esc(s.id)}"><div class="sc-h"><b>${esc(s.brand||s.name)}</b><span class="badge">${LVT[r.lv]}</span></div>
+    <div class="sc-m">${s.brand?esc(s.name)+' · ':''}공개 ${N0(s.total)}쪽${s.left_pages?` · 남은 ${N0(s.left_pages)}`:' · 남은 페이지 없음'}${r.age!=null?` · ${s.created?'도메인':'기록'} ${N0(r.age)}일째`:''}</div>
+    <div class="fun">${r.stages.map(stage).join('')}</div>
+    ${r.todo.length?`<ul class="sc-todo">${r.todo.slice(0,2).map(t=>`<li class="t-${t[0]}">${esc(t[1])}</li>`).join('')}${r.todo.length>2?`<li class="more">외 ${r.todo.length-2}건</li>`:''}</ul>`:'<p class="sc-ok">할 일 없음</p>'}
+    ${ev?`<div class="sc-log">최근 · ${esc(ev[0].slice(5))} ${esc(ev[1])}</div>`:''}</a>`}).join('')||'<p class="mute">해당하는 사이트가 없습니다</p>'}</div>
+  <p class="mute small" style="margin-top:14px">판정 기준 — 수집: 7일 0이면 막힘, 공개 페이지의 0.5%(최소 7) 미만이면 주의. 구글 색인: 서치콘솔 URL 검사 표본(최근 30일)에서 20% 미만 막힘, 50% 미만 주의. 노출: 28일 0이면(도메인 30일 넘음) 막힘, 클릭 0이면 주의.</p>`}
+function seoTab(s){const r=grade(s),g=r.g,ev=events(s);
+  const gd=g?g.days.map(x=>({d:x[0],clk:x[1],imp:x[2],pos:x[3]})):[];
+  const qt=(rows,first)=>tbl(`<th class="l">${first}</th><th>클릭</th><th>노출</th><th>평균 순위</th>`,rows.map(x=>`<tr><td class="l wrap">${first==='페이지'?plink(s,x[0]):esc(x[0])}</td><td>${f(x[1])}</td><td>${f(x[2])}</td><td>${x[3]}</td></tr>`),'28일 동안 노출 없음',10);
+  const body=`<div class="card full sc-big lv-${r.lv}"><div class="sc-h"><h2>${esc(s.brand||s.name)} 지금 상태</h2><span class="badge">${LVT[r.lv]}</span></div><div class="fun">${r.stages.map(stage).join('')}</div></div>
+  <div class="grid2"><div class="card"><div class="chead"><h2>할 일 ${r.todo.length}건</h2></div>${r.todo.length?r.todo.map(t=>`<div class="al"><span class="lv" style="color:${(ALV[t[0]]||ALV.info)[1]};background:${(ALV[t[0]]||ALV.info)[2]}">${TDL[t[0]]||'참고'}</span><div><b>${esc(t[1])}</b><div class="mute small">${esc(t[2])}</div></div></div>`).join(''):'<p class="ok" style="margin:0">지금 할 일이 없습니다</p>'}</div>
+  <div class="card"><div class="chead"><h2>작업 기록</h2><span class="mute small">자동 = 대시보드가 본 공개·전송 · 서치콘솔 = 자동 재제출 · 작업 = 직접 한 일</span></div>${ev.length?`<div class="evs">${ev.slice(0,14).map(e=>`<div class="ev"><span class="mute">${esc(e[0].slice(5))}</span><span class="tag">${EVT[e[2]]}</span><span>${esc(e[1])}</span></div>`).join('')}</div>`:'<p class="mute small">기록 없음</p>'}</div></div>
+  ${g?`<div class="grid2"><div class="card"><div class="chead"><h2>구글 노출 (서치콘솔)</h2><span class="mute small">90일 · 이틀 전까지</span></div><div class="chart" id="g1"></div></div>
+  <div class="card"><div class="chead"><h2>구글 클릭</h2><span class="mute small">90일</span></div><div class="chart" id="g2"></div></div></div>
+  <div class="grid2"><div class="card flush"><div class="chead"><h2>검색어 상위 (28일)</h2></div>${qt(g.q,'검색어')}</div><div class="card flush"><div class="chead"><h2>페이지 상위 (28일)</h2></div>${qt(g.p,'페이지')}</div></div>
+  <div class="grid2"><div class="card"><div class="chead"><h2>색인 표본 상태</h2><span class="mute small">URL 검사 최근 30일 ${g.idx.n}개</span></div>${hbars(Object.entries(g.idx.states).sort((a,b)=>b[1]-a[1]),'아직 검사 전입니다')}</div>
+  <div class="card"><div class="chead"><h2>구글 사이트맵</h2></div><p style="margin:0">제출 ${g.sm.n}개 · 주소 ${N0(g.sm.urls)}개<br>마지막으로 읽은 날 ${esc(g.sm.read||'없음')} · 마지막 제출 ${esc(g.sm.submitted||'없음')}<br>오류 ${g.sm.errors?`<span class="warn">${g.sm.errors}</span>`:'0'} <span class="mute small">· 7일 넘게 안 읽으면 자동 재제출</span></p></div></div>`
+  :`<div class="card full"><p class="mute" style="margin:0">${G&&G.sites?'서치콘솔에 이 사이트가 없어 색인·노출 자료가 없습니다.':'서치콘솔 자료가 아직 올라오지 않았습니다.'}</p></div>`}`;
+  if(g&&gd.length)charts.push(()=>lineChart($('#g1'),gd,[{k:'imp',t:'노출',c:C.google}]),()=>lineChart($('#g2'),gd,[{k:'clk',t:'클릭',c:C.search}]));
+  return body}
+
+const TABS=[['','SEO 분석','pulse'],['stats','방문 분석','users'],['visits','방문 기록','eye'],['crawl','수집·색인','bot'],['publish','공개·발행','cal'],['log','날짜별 기록','book']];
 async function site(id,tab){
   const s=cache[id]||(cache[id]=await api('site/'+id));if(!s)return;
   const d=s.days,y=day(1),w=day(7),t=D.today,W=win==7?s.w7:s.w14,bad=Object.entries(s.health||{}),ds=series(d,range);
   const age=s.created?Math.floor((new Date(t)-new Date(s.created))/864e5):null;
-  topbar(s.name+(s.preview?' (미리보기)':''),TABS.find(x=>x[0]===tab)[1]+' · 갱신 '+esc(s.updated),tab==='visits'?'':seg('range',RNG,range));
+  topbar((s.brand||s.name)+(s.preview?' (미리보기)':''),TABS.find(x=>x[0]===tab)[1]+' · 갱신 '+esc(s.updated),tab==='visits'||!tab?'':seg('range',RNG,range));
   let body='';charts.length=0;
-  if(!tab){
+  if(!tab)body=seoTab(s);
+  else if(tab==='stats'){
     const mt=c=>MED.reduce((a,m)=>a+(c[m[0]]||0),0),sv=c=>lsort==='all'?mt(c):(c[lsort]||0),mth=MED.map(m=>`<th data-ls="${m[0]}"><i class="sw2" style="background:${m[2]}"></i>${m[1]}<span class="ar">${lsort===m[0]?'▾':''}</span></th>`).join(''),mtd=c=>MED.map(m=>`<td>${f(c[m[0]])}</td>`).join('');
     const land=W.land.slice().sort((a,b)=>sv(b[2])-sv(a[2])).filter(p=>sv(p[2])>0),msum={};W.land.forEach(p=>MED.forEach(m=>{const n=p[2][m[0]]||0;if(n&&(!msum[m[0]]||n>msum[m[0]][1]))msum[m[0]]=[p[0],n]}));
     const mtotal=MED.map(m=>[m,m[0]==='naver'?(W.src.naver||0):m[0]==='google'?(W.src.google||0):m[0]==='search_etc'?(W.src.daum||0)+(W.src.bing||0):m[0]==='naver_etc'?['naver_blog','naver_place','naver_cafe','naver_etc'].reduce((a,k)=>a+(W.src[k]||0),0):m[0]==='direct'?(W.src.direct||0):['site','sns','kakao'].reduce((a,k)=>a+(W.src[k]||0),0)]),mall=mtotal.reduce((a,x)=>a+x[1],0);
@@ -910,8 +1010,8 @@ async function site(id,tab){
     <p class="mute small">누계는 대시보드가 이 사이트를 보기 시작한 날부터 기록됩니다.</p>`;
   }
   main.innerHTML=`<div class="sitehead"><span>${ic('globe')}</span><a href="https://${esc(s.host)}/" target="_blank" rel="noopener noreferrer">${esc(s.name)}</a><span>${h('created')} ${s.created?esc(s.created)+` · ${age.toLocaleString('ko-KR')}일째`:'확인 안 됨'}</span><span>공개 주소 ${s.total.toLocaleString('ko-KR')}</span></div>
-  ${(as=>as.length?`<div class="card full" style="border-color:#f3c9c4"><div class="chead"><h2>이 사이트에서 확인할 것 ${as.length}건</h2></div>${alertList(as)}</div>`:'')(alerts(s))}
-  <nav class="tabs">${TABS.map(x=>`<a href="#/s/${esc(id)}${x[0]?'/'+x[0]:''}" class="${tab===x[0]?'on':''}">${x[1]}</a>`).join('')}</nav>${tab==='visits'?'':estNote(ds)}${body}`;
+  ${(as=>as.length&&tab?`<div class="card full" style="border-color:#f3c9c4"><div class="chead"><h2>이 사이트에서 확인할 것 ${as.length}건</h2></div>${alertList(as)}</div>`:'')(alerts(s))}
+  <nav class="tabs">${TABS.map(x=>`<a href="#/s/${esc(id)}${x[0]?'/'+x[0]:''}" class="${tab===x[0]?'on':''}">${x[1]}</a>`).join('')}</nav>${tab==='visits'||!tab?'':estNote(ds)}${body}`;
   if(tab==='visits'){const paint=()=>{const fs=$('#fsrc').value,ft=$('#ftel').value,q=$('#fq').value.trim();
       const rows=s.visits.filter(v=>(!fs||v.src===fs)&&(!ft||v.tel||v.kakao)&&(!q||(v.land+' '+v.kw+' '+v.pages.join(' ')+' '+v.ref).includes(q)));
       $('#vt').innerHTML=`<tr><th class="l">시각</th><th class="l">어디서</th><th class="l">처음 본 페이지</th><th>본 쪽수</th><th class="l">기기</th><th class="l">전화·카톡</th><th class="l">IP</th></tr>`+(rows.map((v,i)=>`<tr class="row" data-v="${i}"><td class="l">${esc(v.t)}</td><td class="l">${esc(SRC[v.src]||v.src)}${v.kw?` <span class="mute">“${esc(v.kw)}”</span>`:v.ref&&!['naver','google','daum','bing'].includes(v.src)?` <span class="mute">${esc(v.ref)}</span>`:''}</td><td class="l wrap">${esc(v.land)}</td><td>${v.n}</td><td class="l">${esc(v.dev)}</td><td class="l">${v.tel?'<span class="ok">전화</span>':''}${v.tel&&v.kakao?' · ':''}${v.kakao?'<span class="ok">카톡</span>':''}</td><td class="l mute">${esc(v.ip)}</td></tr>`).join('')||'<tr><td class="mute l" colspan="7">조건에 맞는 방문이 없습니다</td></tr>');
@@ -932,9 +1032,9 @@ function account(){topbar('비밀번호 변경','바꾸면 다른 기기의 로�
 async function api(p){const r=await fetch('/api/'+p,{cache:'no-store'});if(r.status===401){location.href='/login';return null}if(!r.ok){main.innerHTML=`<p class="warn">자료를 불러오지 못했습니다 (${r.status}). 수집이 아직 한 번도 돌지 않았을 수 있습니다.</p>`;return null}return r.json()}
 /* 위쪽 막대: 사이트 고르기(누르면 찾기 창) + 제목 + 기간 */
 function topbar(title,sub,right){const cur=(location.hash||'#/').slice(2).split('/'),sid=cur[0]==='s'?cur[1]:'',now=D.sites.find(s=>s.id===sid),y=day(1);
-  const item=s=>`<a href="#/s/${esc(s.id)}${cur[0]==='s'&&cur[2]?'/'+esc(cur[2]):''}" class="${s.id===sid?'on':''}" data-n="${esc((s.name+' '+s.host).toLowerCase())}"><span>${esc(s.name)}</span><span title="어제 방문자">${sum(s.days,'visitors',y,y).toLocaleString('ko-KR')}</span></a>`;
+  const item=s=>`<a href="#/s/${esc(s.id)}${cur[0]==='s'&&cur[2]?'/'+esc(cur[2]):''}" class="${s.id===sid?'on':''}" data-n="${esc((s.name+' '+s.host+' '+(s.brand||'')).toLowerCase())}"><span>${esc(s.brand||s.name)}</span><span title="어제 방문자">${sum(s.days,'visitors',y,y).toLocaleString('ko-KR')}</span></a>`;
   const live=D.sites.filter(s=>!s.preview).sort((a,b)=>sum(b.days,'visitors',y,y)-sum(a.days,'visitors',y,y)),pre=D.sites.filter(s=>s.preview);
-  $('#top').innerHTML=`<div class="sw"><button type="button" class="swbtn" id="swb" aria-haspopup="true" aria-expanded="false">${ic('globe')}<b>${now?esc(now.name):'전체 사이트'}</b>${ic('down')}</button>
+  $('#top').innerHTML=`<div class="sw"><button type="button" class="swbtn" id="swb" aria-haspopup="true" aria-expanded="false">${ic('globe')}<b>${now?esc(now.brand||now.name):'전체 사이트'}</b>${ic('down')}</button>
   <div class="pop" id="pop"><input id="pq" type="search" placeholder="사이트 이름으로 찾기" aria-label="사이트 찾기"><div class="list"><a href="#/" class="${sid?'':'on'}" data-n="전체 현황 all"><span>전체 현황</span><span>${D.sites.length}곳</span></a>
   <div class="g">운영 사이트 · 어제 방문자</div>${live.map(item).join('')}${pre.length?`<div class="g">미리보기</div>${pre.map(item).join('')}`:''}</div></div></div>
   <div class="grow"><h1>${esc(title)}</h1><div class="mute small">${sub}</div></div>${right||''}`;
@@ -944,16 +1044,19 @@ function topbar(title,sub,right){const cur=(location.hash||'#/').slice(2).split(
   $('#pq').oninput=filt;$('#pq').onkeydown=e=>{if(e.key==='Enter'){const a=[...pop.querySelectorAll('a')].find(a=>a.style.display!=='none');if(a){location.hash=a.getAttribute('href');open(false)}}if(e.key==='Escape')open(false)}}
 function nav(){const cur=(location.hash||'#/').slice(2).split('/'),sid=cur[0]==='s'?cur[1]:'',tab=cur[2]||'';
   const a=(href,icon,label,on)=>`<a href="${href}" class="${on?'on':''}">${ic(icon)}<span>${label}</span></a>`;
-  $('#side').innerHTML=`<div class="brand"><i>${ic('pulse')}</i>운영 현황</div>${a('#/','grid','전체 현황',!cur[0])}${a('#/check','alert','오늘 점검'+(n=>n?` <span class="tag" style="background:var(--bad);color:#fff">${n}</span>`:'')(D.sites.filter(s=>alerts(s).length).length),cur[0]==='check')}
+  $('#side').innerHTML=`<div class="brand"><i>${ic('pulse')}</i>운영 현황</div>${a('#/','grid','SEO 분석',!cur[0])}${a('#/stats','users','전체 통계',cur[0]==='stats')}${a('#/check','alert','오늘 점검'+(n=>n?` <span class="tag" style="background:var(--bad);color:#fff">${n}</span>`:'')(D.sites.filter(s=>alerts(s).length).length),cur[0]==='check')}
   ${sid?`<div class="grp">이 사이트</div>${TABS.map(x=>a(`#/s/${esc(sid)}${x[0]?'/'+x[0]:''}`,x[2],x[1],tab===x[0])).join('')}`:`<div class="grp">사이트</div><button type="button" class="nav" id="pick">${ic('globe')}<span>사이트 고르기</span></button>`}
   <div class="sp"></div>${a('#/help','book','용어 설명',cur[0]==='help')}${a('#/account','key','비밀번호 변경',cur[0]==='account')}<form method="post" action="/logout"><button class="nav">${ic('out')}<span>로그아웃</span></button></form>`;
   const p=$('#pick');if(p)p.onclick=e=>{e.stopPropagation();$('#swb').click()}}
-async function route(){if(!D){D=await api('data');if(!D)return}const p=(location.hash||'#/').slice(2).split('/');tip.style.display='none';
-  if(p[0]==='s'&&D.sites.some(s=>s.id===p[1]))await site(p[1],TABS.some(x=>x[0]===p[2])?p[2]:'');else if(p[0]==='check')check();else if(p[0]==='help')help();else if(p[0]==='account')account();else overview();nav()}
+async function route(){if(!D){D=await api('data');if(!D)return}
+  if(G===null)G=await fetch('/api/gsc',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
+  const p=(location.hash||'#/').slice(2).split('/');tip.style.display='none';charts.length=0;
+  if(p[0]==='s'&&D.sites.some(s=>s.id===p[1]))await site(p[1],TABS.some(x=>x[0]===p[2])?p[2]:'');else if(p[0]==='check')check();else if(p[0]==='help')help();else if(p[0]==='account')account();else if(p[0]==='stats')overview();else home();nav();draw()}
 addEventListener('hashchange',()=>route().then(()=>scrollTo(0,0)));
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(draw,150)});
 document.addEventListener('click',e=>{const pop=$('#pop');if(pop&&pop.classList.contains('open'))pop.classList.remove('open');
   const b=e.target.closest('[data-seg] button');if(b){const n=b.parentNode.dataset.seg;if(n==='range')range=+b.dataset.v;else win=+b.dataset.v;const y=scrollY;route().then(()=>scrollTo(0,y));return}
+  const fb=e.target.closest('[data-fl]');if(fb){fl=fb.dataset.fl;home();return}
   const ls=e.target.closest('[data-ls]');if(ls){lsort=ls.dataset.ls;const y=scrollY;route().then(()=>scrollTo(0,y));return}
   const m=e.target.closest('.morebtn');if(m){const o=m.parentNode.classList.toggle('open');m.textContent=o?'접기':`전체 ${m.dataset.more}줄 보기`;return}
   const tr=e.target.closest('tr[data-go]');if(tr)location.hash=tr.dataset.go});
